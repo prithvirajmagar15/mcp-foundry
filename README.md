@@ -31,22 +31,6 @@ All servers in this repository implement the [MCP protocol](https://github.com/m
 
 Refer to each server's README for specific endpoints, authentication, and usage examples.
 
-## Development Notes
-
-This project follows a polyglot structure with implementations in both Python and TypeScript:
-
-### Python Development
-
-1. Python code is located in the src/python directory
-2. Always activate the virtual environment from the project root
-3. For package installation, ensure you're in the Python directory where pyproject.toml is located
-
-### TypeScript Development
-
-1. TypeScript code is located in the src/typescript directory
-2. Uses ES Modules for modern JavaScript compatibility
-3. Standard npm workflow: `npm install` → `npm run build` → `npm start`
-
 ## License
 
 This project is licensed under the MIT License. See the LICENSE file for details.
