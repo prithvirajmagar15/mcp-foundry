@@ -1,6 +1,6 @@
-# Azure AI Foundry MCP Servers
+# Azure AI Foundry MCP Servers (Experimental)
 
-This repository showcases MCP servers that integrates with Azure AI Foundry to enable interesting scenarios powered by Azure AI Foundry.
+> **Experimental:** This repository is a playground for evolving Azure AI Foundry capabilities. It empowers Foundry developers to use and extend Foundry as a toolkit for building amazing things. 
 
 [![GitHub watchers](https://img.shields.io/github/watchers/azure-ai-foundry/mcp-foundry.svg?style=social&label=Watch)](https://github.com/azure-ai-foundry/mcp-foundry/watchers)
 [![GitHub forks](https://img.shields.io/github/forks/azure-ai-foundry/mcp-foundry.svg?style=social&label=Fork)](https://github.com/azure-ai-foundry/mcp-foundry/fork)
@@ -9,11 +9,27 @@ This repository showcases MCP servers that integrates with Azure AI Foundry to e
 
 ## MCP Servers
 
-- [Azure AI Agent Service MCP Server](./azure-ai-agent-service-mcp-server/README.md) - Connect to Azure AI Agents and use them in any MCP client.
+| Server Name | Description |
+|-------------|-------------|
+| [Foundry-Agent-Service](./Foundry-Agent-Service/README.md) | Connect to Azure AI Agents and use them in any MCP client. |
+| [Foundry-Content-Safety](./Foundry-Content-Safety/README.md) | Content moderation and safety tools for Foundry applications. |
+| [Foundry-Knowledge](./Foundry-Knowledge/README.md) | Knowledge management and retrieval for Foundry-powered solutions. |
+| [Foundry-Models](./Foundry-Models/README.md) | Model hosting, management, and inference for Foundry. |
+| [Foundry-Observability](./Foundry-Observability/README.md) | Monitoring and observability for Foundry services. |
 
-### Usage with Other MCP Clients
+## Access the remote MCP server from any MCP client
 
-These servers follow the MCP protocol specification and can be used with any MCP-compatible client. Refer to your client's documentation for specific instructions on how to connect to external MCP servers.
+All servers in this repository implement the [MCP protocol](https://github.com/modelcontext/model-context-protocol). You can connect to any of these servers from any MCP-compatible client.
+
+**Example:**
+
+1. Obtain the server's endpoint (see the individual server README for details).
+2. In your MCP client, configure the remote server URL:
+   - For CLI clients: `mcp connect <server-url>`
+   - For code: Use the MCP client library to connect to the server endpoint.
+3. Interact with the server as per your client's documentation.
+
+Refer to each server's README for specific endpoints, authentication, and usage examples.
 
 ## Development Notes
 
@@ -33,4 +49,8 @@ This project follows a polyglot structure with implementations in both Python an
 
 ## License
 
-This project is licensed under the MIT License. This means you are free to use, modify, and distribute the software, subject to the terms and conditions of the MIT License. For more details, please see the LICENSE file in the project repository.
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+## Contributing
+
+Interested in contributing, and running this server locally? See [CONTRIBUTING.md](./CONTRIBUTING.md) to get started.
