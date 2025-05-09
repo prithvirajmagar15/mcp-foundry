@@ -10,4 +10,4 @@ dependencies = [
 ]
 
 [project.scripts]
-run-azure-foundry-mcp = ".__main__:main"
+run-azure-foundry-mcp = "__main__:main"
