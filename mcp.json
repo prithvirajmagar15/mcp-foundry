@@ -1,0 +1,9 @@
+{
+  "description": "MCP Foundry Server configuration file.",
+  "servers": {
+    "foundry": {
+      "command": "python",
+      "args": ["__main__.py"]
+    }
+  }
+}
