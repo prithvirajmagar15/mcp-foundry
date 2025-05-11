@@ -9,7 +9,7 @@ This repository showcases MCP servers that integrates with Azure AI Foundry to e
 
 ## MCP Servers
 
-- [Azure AI Agent Service MCP Server](./azure-ai-agent-service-mcp-server/README.md) - Connect to Azure AI Agents and use them in any MCP client.
+- [Azure AI Agent Service MCP Server](./docs/azure-ai-agent-service-mcp-server.md) - Connect to Azure AI Agents and use them in any MCP client.
 
 ### Usage with Other MCP Clients
 
