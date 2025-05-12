@@ -134,6 +134,7 @@ async def get_code_sample_for_github_and_labs_model(model_name: str, ctx: Contex
 
     Parameters:
         publisher_name (str): The name of the model's publisher, typically the organization or entity that developed the model. Optional parameter.
+        - !YOU MUST PROVIDE THIS PARAMETER IF THE MODEL NAME IS FROM FOUNDRY MODELS.
         model_name (str): The name of the specific model for which code samples and implementation guidance are requested.
         ctx (Context): The context of the current session, which includes metadata and session-specific information.
 
