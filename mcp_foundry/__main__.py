@@ -24,14 +24,65 @@ def get_client_headers_info(ctx):
 
 @mcp.tool()
 async def list_models_from_model_catalog(ctx: Context, supports_free_playground: bool = None, publisher_name = "", license_name = "", max_pages = 10) -> str:
-    """Get a list of all supported projects from Azure AI Foundry."""
+    """
+    Retrieves a list of supported models from the Azure AI Foundry catalog.
+
+    This function is useful when a user requests a list of available Foundry models or Foundry Labs projects.
+    It fetches models based on optional filters like whether the model supports free playground usage,
+    the publisher name, and the license type. The function will return the list of models in pages and
+    will stop when the maximum number of pages (`max_pages`) is reached or when no more models are available.
+
+    Parameters:
+        ctx (Context): The context of the current session. Contains metadata about the request and session.
+        supports_free_playground (bool, optional): If specified, filters models to include only those that
+            can be used for free by users for prototyping. If `True`, only models available for free usage
+            will be included in the result. Defaults to `None`, meaning no filter is applied.
+        publisher_name (str, optional): A filter to specify the publisher of the models to retrieve. If provided,
+            only models from this publisher will be returned. Defaults to an empty string, meaning no filter is applied.
+        license_name (str, optional): A filter to specify the license type of the models to retrieve. If provided,
+            only models with this license will be returned. Defaults to an empty string, meaning no filter is applied.
+        max_pages (int, optional): The maximum number of pages to fetch from the catalog. Defaults to 10.
+            The function will stop fetching models after this many pages or once all models are retrieved.
+
+    Returns:
+        str: A JSON-encoded string containing the list of models and their metadata. The list will include 
+             model names, inference model names, summaries, and the total count of models retrieved.
+
+    Usage:
+        Use this function when users inquire about available models from the Azure AI Foundry catalog.
+        It can also be used when filtering models by free playground usage, publisher name, or license type.
+        If you want to find models suitable for prototyping that are free to use, set `supports_free_playground=True`.
+    """
     models_list = get_models_list(ctx, supports_free_playground, publisher_name, license_name, max_pages)
 
     return models_list
 
 @mcp.tool()
 async def get_model_details_from_model_catalog(assetId: str, ctx: Context):
-    """Get details of a specific model from Azure AI Foundry."""
+    """
+    Retrieves detailed information for a specific model from the Azure AI Foundry catalog.
+
+    This function is used when a user requests detailed information about a particular model in the Foundry catalog.
+    It fetches the model's metadata, capabilities, descriptions, and other relevant details associated with the given asset ID.
+
+    Parameters:
+        assetId (str): The unique asset ID of the model whose details are to be retrieved. This is a required parameter.
+        ctx (Context): The context of the current session, containing metadata about the request and session.
+
+    Returns:
+        dict: A dictionary containing the model's detailed information, including:
+            - model name, version, framework, tags, datasets
+            - model URL and storage location
+            - model capabilities (e.g., agents, assistants, reasoning, tool-calling)
+            - description, summary, and key capabilities
+            - publisher information, licensing details, and terms of use
+            - model creation and modification times
+            - variant information, model metadata, and system requirements
+
+    Usage:
+        Call this function when you need to retrieve detailed information about a model using its asset ID. 
+        This is useful when users inquire about a model's features, or when specific metadata about a model is required.
+    """
     headers = get_client_headers_info(ctx)
 
     response = requests.get(f"https://ai.azure.com/api/westus2/modelregistry/v1.0/registry/models?assetIdOrReference={assetId}", headers=headers)
@@ -43,8 +94,25 @@ async def get_model_details_from_model_catalog(assetId: str, ctx: Context):
     return model_details
 
 @mcp.tool()
-async def list_labs_projects(ctx: Context) -> str:
-    """Get a list of all supported projects from Azure AI Foundry Labs."""
+async def list_azure_ai_foundry_labs_projects(ctx: Context):
+    """
+    Retrieves a list of state-of-the-art AI models from Microsoft Research available in Azure AI Foundry Labs.
+
+    This function is used when a user requests information about the cutting-edge models and projects developed by Microsoft Research within the Azure AI Foundry Labs. These models represent the latest advancements in AI research and are often experimental or in early development stages.
+
+    Parameters:
+        ctx (Context): The context of the current session, which includes metadata and session-specific information.
+
+    Returns:
+        list: A list containing the list of available AI models and projects in Azure AI Foundry Labs. The list will include information such as project names, descriptions, and possibly other metadata relevant to the state-of-the-art models.
+
+    Usage:
+        Use this function when a user wants to explore the latest models and research projects available in the Azure AI Foundry Labs. These projects are typically cutting-edge and may involve new or experimental features not yet widely available.
+
+    Notes:
+        - The models and projects in Azure AI Foundry Labs are generally from the forefront of AI research and may have specific requirements or experimental capabilities.
+        - The list returned may change frequently as new models and projects are developed and made available for exploration.
+    """
 
     headers = get_client_headers_info(ctx)
 
@@ -58,14 +126,26 @@ async def list_labs_projects(ctx: Context) -> str:
 
 
 @mcp.tool()
-async def get_implementation_details(inference_model_name: str, ctx: Context) -> str:
+async def get_code_sample_for_github_and_labs_model(model_name: str, ctx: Context, publisher_name: str = None) -> str:
     """
-    Detailed usage guidance (scripts, docs, etc) on how to implement a particular project from GitHub Models.
-    Use this tool to get the implementation details of a project.
-    Do not assume you know how to implement a project just because you know the project name.
+    Retrieves detailed implementation guidance and code samples for a specific model from Azure AI Foundry Labs or GitHub.
 
-    Args:
-        project_name: name of project
+    This function is used to get code examples and implementation instructions for a given model, helping users understand how to integrate and use the model effectively in their applications. It is crucial to call this function before attempting to use the model, as it provides necessary implementation details. Additionally, this function can be invoked whenever there are questions or uncertainties regarding how to use the model.
+
+    Parameters:
+        publisher_name (str): The name of the model's publisher, typically the organization or entity that developed the model. Optional parameter.
+        model_name (str): The name of the specific model for which code samples and implementation guidance are requested.
+        ctx (Context): The context of the current session, which includes metadata and session-specific information.
+
+    Returns:
+        str: A string containing the detailed implementation guidance, including code samples and usage instructions for the specified model.
+
+    Usage:
+        Use this function when building with a specific model to get step-by-step guidance and code examples. It is especially useful for developers who need to understand how to integrate a model into their application effectively.
+
+    Notes:
+        - Ensure to call this function before attempting to use the model, as it provides foundational guidance that may include necessary setup, configuration, and integration steps.
+        - This function can be called anytime there is uncertainty or a question regarding how to use the model.
     """
 
     headers = get_client_headers_info(ctx)
@@ -78,8 +158,8 @@ async def get_implementation_details(inference_model_name: str, ctx: Context) ->
 
     project_names = [project["name"] for project in project_reponse["projects"]]
 
-    if inference_model_name in project_names:
-        response = requests.get(f"{labs_api_url}/projects/{inference_model_name}/implementation", headers=headers)
+    if model_name in project_names:
+        response = requests.get(f"{labs_api_url}/projects/{model_name}/implementation", headers=headers)
         if response.status_code != 200:
             return f"Error fetching projects from API: {response.status_code}"
 
@@ -94,14 +174,40 @@ async def get_implementation_details(inference_model_name: str, ctx: Context) ->
     guidance = response.json()
     GH_GUIDANCE = guidance["resource"]["content"]
 
-    guidance = GH_GUIDANCE.replace("{{inference_model_name}}", inference_model_name)
+    guidance = GH_GUIDANCE.replace("{{inference_model_name}}", f"{publisher_name}/{model_name}")
 
     return guidance
 
 
 @mcp.tool()
-def get_prototyping_instructions(ctx: Context) -> str:
-    """Get instructions for prototyping with foundry models and projects."""
+def get_prototyping_instructions_for_github_and_labs(ctx: Context) -> str:
+    """
+    Provides comprehensive instructions and setup guidance for starting to work with Foundry models from Azure AI Foundry Labs.
+
+    This function is crucial to call whenever a user begins talking about or expressing an interest in working with Foundry models. It provides the essential prototyping instructions that include setup, configuration, and the first steps in querying and utilizing the models. It should always be invoked before any other interactions with the models to ensure that the user has the necessary context and knowledge to proceed effectively.
+
+    The instructions include:
+        - Required setup for working with Foundry models.
+        - Details about how to configure the environment.
+        - How to query the models.
+        - Best practices for using Foundry models in prototyping.
+    
+    Parameters:
+        ctx (Context): The context of the current session, which may include session-specific information and metadata that can be used to customize the returned instructions.
+
+    Returns:
+        str: A detailed set of instructions to guide the user in setting up and using Foundry models, including steps on how to get started with queries and the prototyping process.
+
+    Usage:
+        Call this function at the beginning of any interaction involving Foundry models to provide the user with the necessary setup information and best practices. This ensures that the user can begin their work with all the foundational knowledge and tools needed.
+
+    Notes:
+        - This function should be the first step before any interaction with the Foundry models to ensure proper setup and understanding.
+        - It is essential to invoke this function as it provides the groundwork for a successful prototyping experience with Foundry models.
+
+    Importance:
+        The function is critical for preparing the user to effectively use the Azure AI Foundry models, ensuring they have the proper guidance on how to interact with them from the very beginning.
+    """
 
     headers = get_client_headers_info(ctx)
     response = requests.get(f"{labs_api_url}/resources/resource/copilot-instructions.md", headers=headers)
