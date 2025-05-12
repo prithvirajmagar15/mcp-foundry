@@ -126,15 +126,14 @@ async def list_azure_ai_foundry_labs_projects(ctx: Context):
 
 
 @mcp.tool()
-async def get_code_sample_for_github_and_labs_model(model_name: str, ctx: Context, publisher_name: str = None) -> str:
+async def get_code_sample_for_github_and_labs_model(publisher_name: str, model_name: str, ctx: Context) -> str:
     """
     Retrieves detailed implementation guidance and code samples for a specific model from Azure AI Foundry Labs or GitHub.
 
     This function is used to get code examples and implementation instructions for a given model, helping users understand how to integrate and use the model effectively in their applications. It is crucial to call this function before attempting to use the model, as it provides necessary implementation details. Additionally, this function can be invoked whenever there are questions or uncertainties regarding how to use the model.
 
     Parameters:
-        publisher_name (str): The name of the model's publisher, typically the organization or entity that developed the model. Optional parameter.
-        - !YOU MUST PROVIDE THIS PARAMETER IF THE MODEL NAME IS FROM FOUNDRY MODELS.
+        publisher_name (str): The name of the model's publisher, typically the organization or entity that developed the model.
         model_name (str): The name of the specific model for which code samples and implementation guidance are requested.
         ctx (Context): The context of the current session, which includes metadata and session-specific information.
 
@@ -155,9 +154,9 @@ async def get_code_sample_for_github_and_labs_model(model_name: str, ctx: Contex
     if response.status_code != 200:
         return f"Error fetching projects from API: {response.status_code}"
 
-    project_reponse = response.json()
+    project_response = response.json()
 
-    project_names = [project["name"] for project in project_reponse["projects"]]
+    project_names = [project["name"] for project in project_response["projects"]]
 
     if model_name in project_names:
         response = requests.get(f"{labs_api_url}/projects/{model_name}/implementation", headers=headers)
