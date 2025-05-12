@@ -23,7 +23,7 @@ def get_client_headers_info(ctx):
 
 
 @mcp.tool()
-async def list_models_from_model_catalog(ctx: Context, supports_free_playground: bool = None, publisher_name = "", license_name = "", max_pages = 10) -> str:
+async def list_models_from_model_catalog(ctx: Context, supports_free_playground: bool = True, publisher_name = "", license_name = "", max_pages = 10) -> str:
     """
     Retrieves a list of supported models from the Azure AI Foundry catalog.
 
@@ -36,7 +36,7 @@ async def list_models_from_model_catalog(ctx: Context, supports_free_playground:
         ctx (Context): The context of the current session. Contains metadata about the request and session.
         supports_free_playground (bool, optional): If specified, filters models to include only those that
             can be used for free by users for prototyping. If `True`, only models available for free usage
-            will be included in the result. Defaults to `None`, meaning no filter is applied.
+            will be included in the result. Defaults to `True`.
         publisher_name (str, optional): A filter to specify the publisher of the models to retrieve. If provided,
             only models from this publisher will be returned. Defaults to an empty string, meaning no filter is applied.
         license_name (str, optional): A filter to specify the license type of the models to retrieve. If provided,
