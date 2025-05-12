@@ -3,12 +3,12 @@ import requests
 import os
 from dotenv import load_dotenv
 
+from mcp_foundry.utils import get_models_list
+
 load_dotenv()
 
 mcp = FastMCP("azure-ai-foundry-models-mcp-server")
 labs_api_url = os.environ.get("LABS_API_URL", "https://labs-mcp-api.azurewebsites.net/api/v1")
-server_name = os.environ.get("SERVER_NAME", "azure-ai-foundry-labs-mcp-server")
-server_version = os.environ.get("SERVER_VERSION", "0.0.1")
 
 def get_client_headers_info(ctx):
     """Get client headers info."""
@@ -18,41 +18,29 @@ def get_client_headers_info(ctx):
 
     headers = {
         "User-Agent": f"MCP-Client/{client_name} - {client_version}",
-        "X-MCP-Server": f"{server_name}/{server_version}",
     }
     return headers
 
 
 @mcp.tool()
-async def list_models(ctx: Context) -> str:
+async def list_models_from_model_catalog(ctx: Context, supports_free_playground: bool = None, publisher_name = "", license_name = "", max_pages = 10) -> str:
     """Get a list of all supported projects from Azure AI Foundry."""
-    url = "https://api.catalog.azureml.ms/asset-gallery/v1.0/models"
+    models_list = get_models_list(ctx, supports_free_playground, publisher_name, license_name, max_pages)
+
+    return models_list
+
+@mcp.tool()
+async def get_model_details_from_model_catalog(assetId: str, ctx: Context):
+    """Get details of a specific model from Azure AI Foundry."""
     headers = get_client_headers_info(ctx)
-    body = {
-        "filters": [
-            {"field": "freePlayground", "values": ["true"], "operator": "eq"},
-            {"field": "labels", "values": ["latest"], "operator": "eq"},
-        ]
-    }
-    response = requests.post(url, json=body, headers=headers)
 
-    resJson = response.json()
+    response = requests.get(f"https://ai.azure.com/api/westus2/modelregistry/v1.0/registry/models?assetIdOrReference={assetId}", headers=headers)
+    if response.status_code != 200:
+        return f"Error fetching model details from API: {response.status_code}"
 
-    text_models = []
+    model_details = response.json()
 
-    for summary in resJson["summaries"]:
-        if (
-            "text" in summary["modelLimits"]["supportedOutputModalities"]
-            and "text" in summary["modelLimits"]["supportedInputModalities"]
-        ):
-            text_model = {
-                "name": summary["name"],
-                "inference_model_name": summary["publisher"].replace(" ", "-") + "/" + summary["name"],
-                "summary": summary["summary"],
-            }
-            text_models.append(text_model)
-
-    return text_models
+    return model_details
 
 @mcp.tool()
 async def list_labs_projects(ctx: Context) -> str:
