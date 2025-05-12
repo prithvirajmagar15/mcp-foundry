@@ -13,7 +13,7 @@ def get_client_headers_info(ctx):
     }
     return headers
 
-def get_models_list(ctx: Context, supports_free_playground: bool = None, publisher_name: str = "", license_name: str = "", max_pages: int = 10) -> ModelsList:
+def get_models_list(ctx: Context, supports_free_playground: bool = None, publisher_name: str = "", license_name: str = "", max_pages: int = 5) -> ModelsList:
     """Get a list of all supported models from Azure AI Foundry with optional filters."""
     url = "https://api.catalog.azureml.ms/asset-gallery/v1.0/models"
     headers = get_client_headers_info(ctx)
@@ -23,11 +23,11 @@ def get_models_list(ctx: Context, supports_free_playground: bool = None, publish
     # Always include 'latest' label
     filters.append({"field": "labels", "values": ["latest"], "operator": "eq"})
 
-    if supports_free_playground is not None:
+    if supports_free_playground is True:
         filters.append({
             "field": "freePlayground",
-            "values": ["true" if supports_free_playground else "false"],
-            "operator": "contains"
+            "values": ["true"],
+            "operator": "eq"
         })
 
     if publisher_name:

@@ -52,6 +52,8 @@ async def list_models_from_model_catalog(ctx: Context, supports_free_playground:
         Use this function when users inquire about available models from the Azure AI Foundry catalog.
         It can also be used when filtering models by free playground usage, publisher name, or license type.
         If you want to find models suitable for prototyping that are free to use, set `supports_free_playground=True`.
+        Specify to the user that if they want to view all models, they must explicitly ask for it.
+        Only the first max_pages * 50 of models will be returned, so if the user wants to see more, they can ask for additional pages.
     """
     models_list = get_models_list(ctx, supports_free_playground, publisher_name, license_name, max_pages)
 
@@ -82,6 +84,8 @@ async def get_model_details_from_model_catalog(assetId: str, ctx: Context):
     Usage:
         Call this function when you need to retrieve detailed information about a model using its asset ID. 
         This is useful when users inquire about a model's features, or when specific metadata about a model is required.
+        After calling this tool make a follow-up call to the get_code_sample_for_github_and_labs_model function to get the code sample for the model.
+        Prioritize the code sample from get_code_sample_for_github_and_labs_model over the model details from get_model_details_from_model_catalog.
     """
     headers = get_client_headers_info(ctx)
 
