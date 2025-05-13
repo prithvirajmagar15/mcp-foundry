@@ -1,6 +1,6 @@
 import pytest
-from mcp_foundry.models import ModelsList
-from mcp_foundry.utils import get_models_list
+from mcp_foundry_model.models import ModelsList
+from mcp_foundry_model.utils import get_models_list
 
 def _mock_ctx():
     """Mock context for testing."""
@@ -19,7 +19,12 @@ def _mock_ctx():
             self.version = "1.0.0"
     return MockContext()
 
-def test_get_models_list_filters():
+def test_get_models_list_no_filters():
     mock_ctx = _mock_ctx()
     models = get_models_list(mock_ctx)
+    assert isinstance(models, ModelsList)
+
+def test_get_models_list_free_playground():
+    mock_ctx = _mock_ctx()
+    models = get_models_list(mock_ctx, supports_free_playground=True)
     assert isinstance(models, ModelsList)

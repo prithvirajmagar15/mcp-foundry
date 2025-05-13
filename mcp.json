@@ -3,7 +3,7 @@
   "servers": {
     "foundry": {
       "command": "python",
-      "args": ["__main__.py"]
+      "args": ["main.py"]
     }
   }
 }

@@ -7,8 +7,9 @@ requires-python = ">=3.11"
 dependencies = [
     "mcp>=1.8.0",
     "pytest>=8.3.5",
+    "pytest-asyncio>=0.26.0",
     "requests>=2.32.3",
 ]
 
 [project.scripts]
-run-azure-foundry-mcp = "mcp_foundry.__main__:main"
+run-azure-foundry-mcp = "mcp_foundry_model.main:main"

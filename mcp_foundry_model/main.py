@@ -3,23 +3,13 @@ import requests
 import os
 from dotenv import load_dotenv
 
-from mcp_foundry.utils import get_models_list
+from mcp_foundry_model.models import ModelDetails
+from mcp_foundry_model.utils import get_client_headers_info, get_models_list, get_code_sample_for_github_model, get_code_sample_for_labs_model, get_code_sample_for_deployment_under_ai_services, get_ai_services_usage_list
 
 load_dotenv()
 
 mcp = FastMCP("azure-ai-foundry-models-mcp-server")
 labs_api_url = os.environ.get("LABS_API_URL", "https://labs-mcp-api.azurewebsites.net/api/v1")
-
-def get_client_headers_info(ctx):
-    """Get client headers info."""
-    client_info = getattr(getattr(ctx.session._client_params, "clientInfo", None), "__dict__", {}) or {}
-    client_name = client_info.get("name", "UnknownClient").replace(" ", "-")
-    client_version = client_info.get("version", "0.0.0")
-
-    headers = {
-        "User-Agent": f"MCP-Client/{client_name} - {client_version}",
-    }
-    return headers
 
 
 @mcp.tool()
@@ -60,44 +50,6 @@ async def list_models_from_model_catalog(ctx: Context, supports_free_playground:
     return models_list
 
 @mcp.tool()
-async def get_model_details_from_model_catalog(assetId: str, ctx: Context):
-    """
-    Retrieves detailed information for a specific model from the Azure AI Foundry catalog.
-
-    This function is used when a user requests detailed information about a particular model in the Foundry catalog.
-    It fetches the model's metadata, capabilities, descriptions, and other relevant details associated with the given asset ID.
-
-    Parameters:
-        assetId (str): The unique asset ID of the model whose details are to be retrieved. This is a required parameter.
-        ctx (Context): The context of the current session, containing metadata about the request and session.
-
-    Returns:
-        dict: A dictionary containing the model's detailed information, including:
-            - model name, version, framework, tags, datasets
-            - model URL and storage location
-            - model capabilities (e.g., agents, assistants, reasoning, tool-calling)
-            - description, summary, and key capabilities
-            - publisher information, licensing details, and terms of use
-            - model creation and modification times
-            - variant information, model metadata, and system requirements
-
-    Usage:
-        Call this function when you need to retrieve detailed information about a model using its asset ID. 
-        This is useful when users inquire about a model's features, or when specific metadata about a model is required.
-        After calling this tool make a follow-up call to the get_code_sample_for_github_and_labs_model function to get the code sample for the model.
-        Prioritize the code sample from get_code_sample_for_github_and_labs_model over the model details from get_model_details_from_model_catalog.
-    """
-    headers = get_client_headers_info(ctx)
-
-    response = requests.get(f"https://ai.azure.com/api/westus2/modelregistry/v1.0/registry/models?assetIdOrReference={assetId}", headers=headers)
-    if response.status_code != 200:
-        return f"Error fetching model details from API: {response.status_code}"
-
-    model_details = response.json()
-
-    return model_details
-
-@mcp.tool()
 async def list_azure_ai_foundry_labs_projects(ctx: Context):
     """
     Retrieves a list of state-of-the-art AI models from Microsoft Research available in Azure AI Foundry Labs.
@@ -124,35 +76,69 @@ async def list_azure_ai_foundry_labs_projects(ctx: Context):
     if response.status_code != 200:
         return f"Error fetching projects from API: {response.status_code}"
 
-    project_reponse = response.json()
+    project_response = response.json()
 
-    return project_reponse["projects"]
-
+    return project_response["projects"]
 
 @mcp.tool()
-async def get_code_sample_for_github_and_labs_model(publisher_name: str, model_name: str, ctx: Context) -> str:
+async def list_deployments_from_azure_ai_services(ctx: Context):
     """
-    Retrieves detailed implementation guidance and code samples for a specific model from Azure AI Foundry Labs or GitHub.
+    Retrieves a list of deployments from Azure AI Services.
 
-    This function is used to get code examples and implementation instructions for a given model, helping users understand how to integrate and use the model effectively in their applications. It is crucial to call this function before attempting to use the model, as it provides necessary implementation details. Additionally, this function can be invoked whenever there are questions or uncertainties regarding how to use the model.
+    This function is used when a user requests information about the available deployments in Azure AI Services. It provides an overview of the models and services that are currently deployed and available for use.
 
     Parameters:
-        publisher_name (str): The name of the model's publisher, typically the organization or entity that developed the model.
-        model_name (str): The name of the specific model for which code samples and implementation guidance are requested.
         ctx (Context): The context of the current session, which includes metadata and session-specific information.
 
     Returns:
-        str: A string containing the detailed implementation guidance, including code samples and usage instructions for the specified model.
+        list: A list containing the details of the deployments in Azure AI Services. The list will include information such as deployment names, descriptions, and possibly other metadata relevant to the deployed services.
 
     Usage:
-        Use this function when building with a specific model to get step-by-step guidance and code examples. It is especially useful for developers who need to understand how to integrate a model into their application effectively.
+        Use this function when a user wants to explore the available deployments in Azure AI Services. This can help users understand what models and services are currently operational and how they can be utilized.
 
     Notes:
-        - Ensure to call this function before attempting to use the model, as it provides foundational guidance that may include necessary setup, configuration, and integration steps.
-        - This function can be called anytime there is uncertainty or a question regarding how to use the model.
+        - The deployments listed may include various models and services that are part of Azure AI Services.
+        - The list may change frequently as new deployments are added or existing ones are updated.
     """
 
     headers = get_client_headers_info(ctx)
+
+    pass
+
+@mcp.tool()
+async def get_model_details_and_code_samples(model_name: str, ctx: Context):
+    """
+    Retrieves detailed information for a specific model from the Azure AI Foundry catalog.
+
+    This function is used when a user requests detailed information about a particular model in the Foundry catalog.
+    It fetches the model's metadata, capabilities, descriptions, and other relevant details associated with the given asset ID.
+
+    Parameters:
+        model_name (str): The name of the model whose details are to be retrieved. This is a required parameter.
+        ctx (Context): The context of the current session, containing metadata about the request and session.
+
+    Returns:
+        dict: A dictionary containing the model's detailed information, including:
+            - model name, version, framework, tags, datasets
+            - model URL and storage location
+            - model capabilities (e.g., agents, assistants, reasoning, tool-calling)
+            - description, summary, and key capabilities
+            - publisher information, licensing details, and terms of use
+            - model creation and modification times
+            - variant information, model metadata, and system requirements
+
+    Usage:
+        Call this function when you need to retrieve detailed information about a model using its asset ID. 
+        This is useful when users inquire about a model's features, or when specific metadata about a model is required.
+    """
+    headers = get_client_headers_info(ctx)
+
+    model_details = {
+        "details": {},
+        "code_sample_azure": None,
+        "code_sample_github": None,
+        "type": None
+    }
 
     response = requests.get(f"{labs_api_url}/projects?source=afl", headers=headers)
     if response.status_code != 200:
@@ -163,25 +149,58 @@ async def get_code_sample_for_github_and_labs_model(publisher_name: str, model_n
     project_names = [project["name"] for project in project_response["projects"]]
 
     if model_name in project_names:
-        response = requests.get(f"{labs_api_url}/projects/{model_name}/implementation", headers=headers)
-        if response.status_code != 200:
-            return f"Error fetching projects from API: {response.status_code}"
+        model_details["details"] = project_response["projects"][project_names.index(model_name)]
+        model_details["code_sample"] = await get_code_sample_for_labs_model(model_name, ctx)
+        model_details["type"] = "Labs"
+        return ModelDetails(**model_details)
+    
+    model_list_details = get_models_list(ctx, model_name=model_name)
+    if model_list_details.fetched_models_count == 0:
+        return f"Model '{model_name}' not found in the catalog."
+    
+    model_list_details  = model_list_details.summaries[0]
 
-        project_response = response.json()
-
-        return project_response
-
-    response = requests.get(f"{labs_api_url}/resources/resource/gh_guidance.md", headers=headers)
+    response = requests.get(f"https://ai.azure.com/api/westus2/modelregistry/v1.0/registry/models?assetIdOrReference={model_list_details['assetId']}", headers=headers)
     if response.status_code != 200:
-        return f"Error fetching projects from API: {response.status_code}"
+        return f"Error fetching model details from API: {response.status_code}"
 
-    guidance = response.json()
-    GH_GUIDANCE = guidance["resource"]["content"]
+    model_details["details"] = response.json()
 
-    guidance = GH_GUIDANCE.replace("{{inference_model_name}}", f"{publisher_name}/{model_name}")
+    # Free playground model add GH guidance to model details
+    if "freePlayground" in model_details['details']['kvTags'] and model_details['details']['kvTags']["freePlayground"] == "true":
+        model_details["type"] = "Free Playground"
+        model_details["code_sample_github"] = await get_code_sample_for_github_model(model_list_details["publisher"], model_list_details["name"], ctx)
 
-    return guidance
+    # OpenAI model add OpenAI guidance to model details
+    if model_list_details["deployment_options"]["openai"]:
+        if not model_details["type"] == "Free Playground":
+            model_details["type"] = "OpenAI"
+        model_details["code_sample_azure"] = await get_code_sample_for_deployment_under_ai_services()
 
+    # PayGo model add PayGo guidance to model details
+    elif model_list_details["deployment_options"]["serverless_endpoint"]:
+        model_details["type"] = "Serverless Endpoint"
+        model_details["code_sample_azure"] = await get_code_sample_for_deployment_under_ai_services()
+
+    # Managed compute model add managed compute guidance to model details
+    elif model_list_details["deployment_options"]["managed_compute"]:
+        model_details["type"] = "Managed Compute"
+        pass
+
+    return ModelDetails(**model_details)
+
+@mcp.tool()
+async def deploy_model_on_ai_services() -> str:
+    """
+    Deploys a model on Azure AI Services.
+
+    This function is used to deploy a model on Azure AI Services, allowing users to integrate the model into their applications and utilize its capabilities.
+
+    Returns:
+        str: A string indicating the status of the deployment process.
+    """
+
+    pass
 
 @mcp.tool()
 def get_prototyping_instructions_for_github_and_labs(ctx: Context) -> str:
@@ -220,7 +239,6 @@ def get_prototyping_instructions_for_github_and_labs(ctx: Context) -> str:
 
     copilot_instructions = response.json()
     return copilot_instructions["resource"]
-
 
 
 def main() -> None:
