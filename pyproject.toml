@@ -1,5 +1,5 @@
 [project]
-name = "mcp-foundry-new"
+name = "mcp-foundry"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -11,5 +11,8 @@ dependencies = [
     "requests>=2.32.3",
 ]
 
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
 [project.scripts]
-run-azure-foundry-mcp = "mcp_foundry_model.main:main"
+run-azure-foundry-mcp = "mcp_foundry.__main__:main"
