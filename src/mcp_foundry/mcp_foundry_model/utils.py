@@ -1,9 +1,21 @@
+import json
+import logging
+import os
+import re
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+from typing import Optional
+
+import dotenv
 import requests
+from azure.identity import DefaultAzureCredential
+from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
+from jinja2.sandbox import SandboxedEnvironment
+from markupsafe import Markup
 from mcp.server.fastmcp import Context
 from mcp_foundry.mcp_foundry_model.models import ModelsList
-import os
-import dotenv
-import logging
 
 dotenv.load_dotenv()
 
@@ -179,17 +191,78 @@ async def get_code_sample_for_labs_model(model_name: str, ctx: Context) -> str:
         logger.error(f"Exception in get_code_sample_for_labs_model: {e}")
         return f"Exception: {e}"
 
-async def  get_code_sample_for_deployment_under_ai_services() -> str:
-    """
-    Retrieves code samples for deploying models under Azure AI Services.
+def get_cognitiveservices_client(
+    subscription_id: str,
+) -> CognitiveServicesManagementClient:
+    return CognitiveServicesManagementClient(
+        credential=DefaultAzureCredential(), subscription_id=subscription_id
+    )
+
+def  get_code_sample_for_deployment_under_ai_services(model_name:str, inference_task: str, endpoint: str, deployment_name: str) -> Optional[str]:
+    """Get a code snippet for a specific deployment.
 
     This function is used to get code examples and implementation instructions for deploying models in Azure AI Services, helping users understand how to integrate and use the models effectively in their applications.
 
+    Args:
+        deployment_name: The name of the deployment.
+        model_name: The name of the model.
+        endpoint_name: The Azure OpenAI endpoint.
+
     Returns:
-        str: A string containing the code samples and usage instructions for deploying models under Azure AI Services.
+        str: A rendered code snippet demonstrating usage of the deployment.
     """
 
-    pass
+    template_response = requests.get(
+            f"https://ai.azure.com/modelcache/code2/oai-sdk-key-auth/en/{inference_task}-python-template.md",
+        )
+
+    if not template_response.ok:
+        return None
+
+    ejs_template = template_response.text
+
+    model_template_config = (
+        requests.get(
+            f"https://ai.azure.com/modelcache/widgets/en/Serverless/azure-openai/{model_name}.json"
+        )
+    ).json()
+
+    naive_jinja2_template = re.sub(r"<%=\s+([\w\.]+)\s%>", r"{{ \1|e }}", ejs_template)
+
+    env = SandboxedEnvironment()
+
+    template = env.from_string(naive_jinja2_template)
+
+    additionalParameters = {}
+
+    if inference_task == "chat-completion":
+        example_content = [
+            history["content"]
+            for history in model_template_config[0]["config"]["examples"][0]["chatHistory"]
+        ]
+        additionalParameters = {
+            "example": {
+                "example_1": example_content[0],
+                "example_2": example_content[1],
+                "example_3": example_content[2],
+            },
+        }
+    elif inference_task == "embeddings":
+        additionalParameters = {
+            "example": {
+                "input": Markup(', '.join(map(repr,model_template_config[0]["config"]["examples"][0]["jsonInput"]["input"])))
+            }
+        }
+
+    return template.render(
+        **{
+            "endpointUrl": endpoint,
+            "deploymentName": deployment_name,
+            "modelName": model_name,
+            **additionalParameters
+        }
+    )
+
 
 async def get_ai_services_usage_list(ctx: Context) -> str:
     """
@@ -204,3 +277,37 @@ async def get_ai_services_usage_list(ctx: Context) -> str:
     headers = get_client_headers_info(ctx)
 
     pass
+
+def az(*args: str) -> dict:
+    """Run azure-cli and return output
+
+    :param str *args: The command line arguments to provide to git
+    :returns: The standard output of the git command. Surrounding whitespace is removed
+    :rtype: str
+    """
+    output = subprocess.run(
+        [sys.executable, "-m", "azure.cli", *args, "-o", "json"],
+        text=True,
+        capture_output=True,
+        check=True,
+    ).stdout.strip()
+
+    return json.loads(output)
+
+def deploy_inline_bicep_template(
+    subscription_id: str, resource_group: str, bicep_template: str
+):
+    """Deploy a bicep template from a string"""
+    with tempfile.NamedTemporaryFile(suffix=".bicep") as tmp:
+        Path(tmp.name).write_text(bicep_template, encoding="utf-8")
+        return az(
+            "deployment",
+            "group",
+            "create",
+            "--subscription",
+            subscription_id,
+            "--resource-group",
+            resource_group,
+            "--template-file",
+            tmp.name,
+        )
