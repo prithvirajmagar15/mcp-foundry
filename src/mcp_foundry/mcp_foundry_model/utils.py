@@ -1,16 +1,19 @@
+import json
 import logging
 import os
 import re
-import tempfile
 import subprocess
 import sys
-import json
+import tempfile
 from pathlib import Path
+from typing import Optional
+
 import dotenv
 import requests
 from azure.identity import DefaultAzureCredential
 from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
 from jinja2.sandbox import SandboxedEnvironment
+from markupsafe import Markup
 from mcp.server.fastmcp import Context
 from mcp_foundry.mcp_foundry_model.models import ModelsList
 
@@ -195,7 +198,7 @@ def get_cognitiveservices_client(
         credential=DefaultAzureCredential(), subscription_id=subscription_id
     )
 
-def  get_code_sample_for_deployment_under_ai_services(model_name:str, endpoint: str, deployment_name: str) -> str:
+def  get_code_sample_for_deployment_under_ai_services(model_name:str, inference_task: str, endpoint: str, deployment_name: str) -> Optional[str]:
     """Get a code snippet for a specific deployment.
 
     This function is used to get code examples and implementation instructions for deploying models in Azure AI Services, helping users understand how to integrate and use the models effectively in their applications.
@@ -209,11 +212,14 @@ def  get_code_sample_for_deployment_under_ai_services(model_name:str, endpoint: 
         str: A rendered code snippet demonstrating usage of the deployment.
     """
 
-    ejs_template = (
-        requests.get(
-            "https://ai.azure.com/modelcache/code2/oai-sdk-key-auth/en/chat-completion-python-template.md",
+    template_response = requests.get(
+            f"https://ai.azure.com/modelcache/code2/oai-sdk-key-auth/en/{inference_task}-python-template.md",
         )
-    ).text
+
+    if not template_response.ok:
+        return None
+
+    ejs_template = template_response.text
 
     model_template_config = (
         requests.get(
@@ -227,21 +233,33 @@ def  get_code_sample_for_deployment_under_ai_services(model_name:str, endpoint: 
 
     template = env.from_string(naive_jinja2_template)
 
-    example_content = [
-        history["content"]
-        for history in model_template_config[0]["config"]["examples"][0]["chatHistory"]
-    ]
+    additionalParameters = {}
+
+    if inference_task == "chat-completion":
+        example_content = [
+            history["content"]
+            for history in model_template_config[0]["config"]["examples"][0]["chatHistory"]
+        ]
+        additionalParameters = {
+            "example": {
+                "example_1": example_content[0],
+                "example_2": example_content[1],
+                "example_3": example_content[2],
+            },
+        }
+    elif inference_task == "embeddings":
+        additionalParameters = {
+            "example": {
+                "input": Markup(', '.join(map(repr,model_template_config[0]["config"]["examples"][0]["jsonInput"]["input"])))
+            }
+        }
 
     return template.render(
         **{
             "endpointUrl": endpoint,
             "deploymentName": deployment_name,
             "modelName": model_name,
-            "example": {
-                "example_1": example_content[0],
-                "example_2": example_content[1],
-                "example_3": example_content[2],
-            },
+            **additionalParameters
         }
     )
 
