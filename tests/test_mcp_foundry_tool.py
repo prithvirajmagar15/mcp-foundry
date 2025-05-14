@@ -1,6 +1,6 @@
 import pytest
 from mcp_foundry.mcp_foundry_model.models import ModelDetails, DeploymentOption
-from mcp_foundry.__main__ import get_model_details_and_code_samples
+from mcp_foundry.mcp_foundry_model.tools import get_model_details_and_code_samples
 
 def _mock_ctx():
     """Mock context for testing."""
