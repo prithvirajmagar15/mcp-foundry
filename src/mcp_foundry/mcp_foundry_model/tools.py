@@ -171,7 +171,7 @@ async def get_model_details_and_code_samples(model_name: str, ctx: Context):
 
     if model_name in project_names:
         model_details["details"] = project_response["projects"][project_names.index(model_name)]
-        model_details["code_sample"] = await get_code_sample_for_labs_model(model_name, ctx)
+        model_details["code_sample_github"] = await get_code_sample_for_labs_model(model_name, ctx)
         model_details["type"] = "Labs"
         return ModelDetails(**model_details)
     
