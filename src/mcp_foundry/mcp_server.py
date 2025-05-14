@@ -2,7 +2,7 @@ import importlib
 import os
 from mcp.server.fastmcp import FastMCP
 
-mcp = FastMCP("azure-ai-foundry-models-mcp-server")
+mcp = FastMCP("azure-ai-foundry-mcp-server")
 
 def auto_import_tools_modules(base_package: str):
     """
