@@ -202,12 +202,12 @@ async def get_model_details_and_code_samples(model_name: str, ctx: Context):
     if model_list_details["deployment_options"]["openai"]:
         if not model_details["type"] == "Free Playground":
             model_details["type"] = "OpenAI"
-        model_details["code_sample_azure"] = await get_code_sample_for_deployment_under_ai_services()
+        model_details["code_sample_azure"] = get_code_sample_for_deployment_under_ai_services(model_list_details["name"], "<your-aoai-endpoint>", "<your-deployment-name>")
 
     # PayGo model add PayGo guidance to model details
     elif model_list_details["deployment_options"]["serverless_endpoint"]:
         model_details["type"] = "Serverless Endpoint"
-        model_details["code_sample_azure"] = await get_code_sample_for_deployment_under_ai_services()
+        model_details["code_sample_azure"] = get_code_sample_for_deployment_under_ai_services(model_list_details["name"], "<your-aoai-endpoint>", "<your-deployment-name>")
 
     # Managed compute model add managed compute guidance to model details
     elif model_list_details["deployment_options"]["managed_compute"]:

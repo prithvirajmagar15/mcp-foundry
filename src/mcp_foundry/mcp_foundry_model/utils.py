@@ -1,10 +1,12 @@
 import logging
 import os
+import re
 
 import dotenv
 import requests
 from azure.identity import DefaultAzureCredential
 from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
+from jinja2.sandbox import SandboxedEnvironment
 from mcp.server.fastmcp import Context
 
 from mcp_foundry.mcp_foundry_model.models import ModelsList
@@ -190,38 +192,19 @@ def get_cognitiveservices_client(
         credential=DefaultAzureCredential(), subscription_id=subscription_id
     )
 
-async def  get_code_sample_for_deployment_under_ai_services(
-    deployment_name: str,
-    azure_ai_services_name: str,
-    resource_group: str,
-    subscription_id: str,
-) -> str:
+def  get_code_sample_for_deployment_under_ai_services(model_name:str, endpoint: str, deployment_name: str) -> str:
     """Get a code snippet for a specific deployment.
 
     This function is used to get code examples and implementation instructions for deploying models in Azure AI Services, helping users understand how to integrate and use the models effectively in their applications.
+
     Args:
         deployment_name: The name of the deployment.
-        azure_ai_services_name: The name of the Azure AI services account.
-        resource_group: The name of the resource group containing the Azure AI services account.
-        subscription_id: The Azure subscription ID.
+        model_name: The name of the model.
+        endpoint_name: The Azure OpenAI endpoint.
 
     Returns:
         str: A rendered code snippet demonstrating usage of the deployment.
     """
-
-    client = get_cognitiveservices_client(subscription_id)
-    account = client.accounts.get(
-        account_name=azure_ai_services_name, resource_group_name=resource_group
-    )
-    endpoint: str = account.properties.endpoint
-
-    deployment: Deployment = client.deployments.get(
-        account_name=azure_ai_services_name,
-        resource_group_name=resource_group,
-        deployment_name=deployment_name,
-    )
-
-    model_name: str = deployment.properties.model.name
 
     ejs_template = (
         requests.get(
@@ -258,6 +241,7 @@ async def  get_code_sample_for_deployment_under_ai_services(
             },
         }
     )
+
 
 async def get_ai_services_usage_list(ctx: Context) -> str:
     """
