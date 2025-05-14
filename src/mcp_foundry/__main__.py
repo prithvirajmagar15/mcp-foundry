@@ -13,7 +13,7 @@ labs_api_url = os.environ.get("LABS_API_URL", "https://labs-mcp-api.azurewebsite
 
 
 @mcp.tool()
-async def list_models_from_model_catalog(ctx: Context, supports_free_playground: bool = True, publisher_name = "", license_name = "", max_pages = 10) -> str:
+async def list_models_from_model_catalog(ctx: Context, supports_free_playground: bool = None, publisher_name = "", license_name = "", max_pages = 10) -> str:
     """
     Retrieves a list of supported models from the Azure AI Foundry catalog.
 
@@ -26,7 +26,7 @@ async def list_models_from_model_catalog(ctx: Context, supports_free_playground:
         ctx (Context): The context of the current session. Contains metadata about the request and session.
         supports_free_playground (bool, optional): If specified, filters models to include only those that
             can be used for free by users for prototyping. If `True`, only models available for free usage
-            will be included in the result. Defaults to `True`.
+            will be included in the result. Defaults to `None`.
         publisher_name (str, optional): A filter to specify the publisher of the models to retrieve. If provided,
             only models from this publisher will be returned. Defaults to an empty string, meaning no filter is applied.
         license_name (str, optional): A filter to specify the license type of the models to retrieve. If provided,
@@ -41,9 +41,8 @@ async def list_models_from_model_catalog(ctx: Context, supports_free_playground:
     Usage:
         Use this function when users inquire about available models from the Azure AI Foundry catalog.
         It can also be used when filtering models by free playground usage, publisher name, or license type.
-        If you want to find models suitable for prototyping that are free to use, set `supports_free_playground=True`.
-        If user didn't specify free playground or ask for models that support GitHub token, always explain that by default it will show the models that support free playground only.
-        Specify to the user that if they want to view all models including the ones that don't support free playground, they must explicitly ask for it.
+        If user didn't specify free playground or ask for models that support GitHub token, always explain that by default it will show the all the models but some of them would support free playground.
+        Explain to the user that if they want to find models suitable for prototyping and free to use with support for free playground, they can set `supports_free_playground=True`.
         Only the first max_pages * 50 of models will be returned, so if the user wants to see more, they can ask for additional pages.
     """
     models_list = get_models_list(ctx, supports_free_playground, publisher_name, license_name, max_pages)
