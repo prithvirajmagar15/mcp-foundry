@@ -2,37 +2,39 @@ from mcp.server.fastmcp import FastMCP, Context
 import requests
 import os
 from dotenv import load_dotenv
+import logging
 
 from .mcp_foundry_model.models import ModelDetails
 from .mcp_foundry_model.utils import get_client_headers_info, get_models_list, get_code_sample_for_github_model, get_code_sample_for_labs_model, get_code_sample_for_deployment_under_ai_services, get_ai_services_usage_list
 
 load_dotenv()
 
+# Configure logger
+logger = logging.getLogger("mcp_foundry")
+logging.basicConfig(level=logging.DEBUG)
+
 mcp = FastMCP("azure-ai-foundry-models-mcp-server")
 labs_api_url = os.environ.get("LABS_API_URL", "https://labs-mcp-api.azurewebsites.net/api/v1")
 
 
 @mcp.tool()
-async def list_models_from_model_catalog(ctx: Context, supports_free_playground: bool = True, publisher_name = "", license_name = "", max_pages = 10) -> str:
+async def list_models_from_model_catalog(ctx: Context, search_for_free_playground: bool = False, publisher_name = "", license_name = "") -> str:
     """
     Retrieves a list of supported models from the Azure AI Foundry catalog.
 
     This function is useful when a user requests a list of available Foundry models or Foundry Labs projects.
     It fetches models based on optional filters like whether the model supports free playground usage,
-    the publisher name, and the license type. The function will return the list of models in pages and
-    will stop when the maximum number of pages (`max_pages`) is reached or when no more models are available.
+    the publisher name, and the license type. The function will return the list of models with useful fields.
 
     Parameters:
         ctx (Context): The context of the current session. Contains metadata about the request and session.
-        supports_free_playground (bool, optional): If specified, filters models to include only those that
-            can be used for free by users for prototyping. If `True`, only models available for free usage
-            will be included in the result. Defaults to `True`.
+        search_for_free_playground (bool, optional): If `True`, filters models to include only those that
+            can be used for free by users for prototyping. If `False`, all models will be included regardless of free playground support.
+            Defaults to `False`.
         publisher_name (str, optional): A filter to specify the publisher of the models to retrieve. If provided,
             only models from this publisher will be returned. Defaults to an empty string, meaning no filter is applied.
         license_name (str, optional): A filter to specify the license type of the models to retrieve. If provided,
             only models with this license will be returned. Defaults to an empty string, meaning no filter is applied.
-        max_pages (int, optional): The maximum number of pages to fetch from the catalog. Defaults to 10.
-            The function will stop fetching models after this many pages or once all models are retrieved.
 
     Returns:
         str: A JSON-encoded string containing the list of models and their metadata. The list will include 
@@ -41,14 +43,22 @@ async def list_models_from_model_catalog(ctx: Context, supports_free_playground:
     Usage:
         Use this function when users inquire about available models from the Azure AI Foundry catalog.
         It can also be used when filtering models by free playground usage, publisher name, or license type.
-        If you want to find models suitable for prototyping that are free to use, set `supports_free_playground=True`.
-        If user didn't specify free playground or ask for models that support GitHub token, always explain that by default it will show the models that support free playground only.
-        Specify to the user that if they want to view all models including the ones that don't support free playground, they must explicitly ask for it.
-        Only the first max_pages * 50 of models will be returned, so if the user wants to see more, they can ask for additional pages.
+        If user didn't specify free playground or ask for models that support GitHub token, always explain that by default it will show the all the models but some of them would support free playground.
+        Explain to the user that if they want to find models suitable for prototyping and free to use with support for free playground, they can look for models that supports free playground, or look for models that they can use with GitHub token.
     """
-    models_list = get_models_list(ctx, supports_free_playground, publisher_name, license_name, max_pages)
+    max_pages = 5
+    # Note: if max_pages becomes larger, the agent will find it more difficult to "summarize" the result, which may not be desired.
+    # max_pages = 10
 
-    return models_list
+    logger.debug("Calling get_models_list with parameters:")
+    logger.debug(f"search_for_free_playground: {search_for_free_playground}")
+    logger.debug(f"publisher_name: {publisher_name}")
+    logger.debug(f"license_name: {license_name}")
+    logger.debug(f"max_pages: {max_pages}")
+
+    models_list = get_models_list(ctx, search_for_free_playground, publisher_name, license_name, max_pages)
+
+    return models_list.json()
 
 @mcp.tool()
 async def list_azure_ai_foundry_labs_projects(ctx: Context):
