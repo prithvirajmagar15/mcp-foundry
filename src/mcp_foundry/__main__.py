@@ -15,6 +15,7 @@ from mcp.server.fastmcp import Context, FastMCP
 
 from .mcp_foundry_model.models import ModelDetails
 from .mcp_foundry_model.utils import (
+    deploy_inline_bicep_template,
     get_client_headers_info,
     get_code_sample_for_deployment_under_ai_services,
     get_code_sample_for_github_model,
@@ -304,6 +305,113 @@ def get_model_quotas(subscription_id: str, location: str) -> list[dict]:
 
     client = get_cognitiveservices_client(subscription_id)
     return [usage.as_dict() for usage in client.usages.list(location)]
+
+@mcp.tool()
+def create_azure_ai_services_account(
+    subscription_id: str,
+    resource_group: str,
+    azure_ai_services_name: str,
+    location: str,
+) -> dict:
+    """Create an Azure AI services account.
+
+    The created Azure AI services account can be used to create a Foundry Project.
+
+    Args:
+        resource_group: The name of the resource group to create the account in.
+        azure_ai_services_name: The name of the Azure AI services account to create.
+        location: The Azure region to create the account in.
+        sku_name: The SKU name for the account (default is "S0").
+        tags: Optional tags to apply to the account.
+
+    Returns:
+        dict: The created Azure AI services account.
+    """
+
+    bicep_template = f"""
+param ai_services_name string = '{azure_ai_services_name}'
+param location string = 'eastus'
+
+resource account 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' = {{
+  name: ai_services_name
+  location: location
+  identity: {{
+    type: 'SystemAssigned'
+  }}
+  kind: 'AIServices'
+  sku: {{
+    name: 'S0'
+  }}
+  properties: {{
+    // Networking
+    publicNetworkAccess: 'Enabled'
+
+    // Specifies whether this resource support project management as child resources, used as containers for access management, data isolation, and cost in AI Foundry.
+    allowProjectManagement: true
+
+    // Defines developer API endpoint subdomain
+    customSubDomainName: ai_services_name
+
+    // Auth
+    disableLocalAuth: false
+  }}
+}}
+"""
+
+    # TODO: Use the Python SDK once the update is released
+    deploy_inline_bicep_template(subscription_id, resource_group, bicep_template)
+
+    client = get_cognitiveservices_client(subscription_id)
+
+    return client.accounts.get(resource_group, azure_ai_services_name)
+
+
+@mcp.tool()
+def create_foundry_project(
+    subscription_id: str,
+    resource_group: str,
+    azure_ai_services_name: str,
+    project_name: str,
+    location: str = "eastus",
+) -> None:
+    """Create an Azure AI Foundry Project.
+
+    Args:
+        subscription_id: The ID of the subscription to create the account in.
+        resource_group: The name of the resource group to create the account in.
+        azure_ai_services_name: The name of the Azure AI services to link the project to.
+            The project must have been created with allowProjectManagement set to "true".
+        project_name: The name of the project to create.
+        location: The Azure region to create the account in.
+
+    Returns:
+        dict: The created Azure AI services account.
+    """
+
+    bicep_template = f"""
+param ai_services_name string = '{azure_ai_services_name}'
+param location string = '{location}'
+param defaultProjectName string = '{project_name}'
+
+
+resource account 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' existing = {{
+  name: ai_services_name
+}}
+
+resource project 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-preview' = {{
+  name: defaultProjectName
+  parent: account
+  location: location
+
+  identity: {{
+    type: 'SystemAssigned'
+  }}
+  properties: {{  }}
+}}
+"""
+
+    # TODO: Use the Python SDK once the update is released
+    return deploy_inline_bicep_template(subscription_id, resource_group, bicep_template)
 
 @mcp.tool()
 def get_prototyping_instructions_for_github_and_labs(ctx: Context) -> str:

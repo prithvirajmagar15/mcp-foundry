@@ -1,14 +1,17 @@
 import logging
 import os
 import re
-
+import tempfile
+import subprocess
+import sys
+import json
+from pathlib import Path
 import dotenv
 import requests
 from azure.identity import DefaultAzureCredential
 from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
 from jinja2.sandbox import SandboxedEnvironment
 from mcp.server.fastmcp import Context
-
 from mcp_foundry.mcp_foundry_model.models import ModelsList
 
 dotenv.load_dotenv()
@@ -256,3 +259,37 @@ async def get_ai_services_usage_list(ctx: Context) -> str:
     headers = get_client_headers_info(ctx)
 
     pass
+
+def az(*args: str) -> dict:
+    """Run azure-cli and return output
+
+    :param str *args: The command line arguments to provide to git
+    :returns: The standard output of the git command. Surrounding whitespace is removed
+    :rtype: str
+    """
+    output = subprocess.run(
+        [sys.executable, "-m", "azure.cli", *args, "-o", "json"],
+        text=True,
+        capture_output=True,
+        check=True,
+    ).stdout.strip()
+
+    return json.loads(output)
+
+def deploy_inline_bicep_template(
+    subscription_id: str, resource_group: str, bicep_template: str
+):
+    """Deploy a bicep template from a string"""
+    with tempfile.NamedTemporaryFile(suffix=".bicep") as tmp:
+        Path(tmp.name).write_text(bicep_template, encoding="utf-8")
+        return az(
+            "deployment",
+            "group",
+            "create",
+            "--subscription",
+            subscription_id,
+            "--resource-group",
+            resource_group,
+            "--template-file",
+            tmp.name,
+        )
