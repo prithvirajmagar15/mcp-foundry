@@ -108,7 +108,7 @@ async def list_azure_ai_foundry_labs_projects(ctx: Context):
     return project_response["projects"]
 
 @mcp.tool()
-async def list_deployments_from_azure_ai_services(ctx: Context):
+def list_deployments_from_azure_ai_services(subscription_id: str, resource_group: str, azure_ai_services_name: str) -> list[dict]:
     """
     Retrieves a list of deployments from Azure AI Services.
 
@@ -128,9 +128,9 @@ async def list_deployments_from_azure_ai_services(ctx: Context):
         - The list may change frequently as new deployments are added or existing ones are updated.
     """
 
-    headers = get_client_headers_info(ctx)
+    client = get_cognitiveservices_client(subscription_id)
 
-    pass
+    return [deployment.as_dict() for deployment in client.deployments.list(resource_group,account_name=azure_ai_services_name)]
 
 @mcp.tool()
 async def get_model_details_and_code_samples(model_name: str, ctx: Context):
@@ -215,6 +215,7 @@ async def get_model_details_and_code_samples(model_name: str, ctx: Context):
         pass
 
     return ModelDetails(**model_details)
+
 
 @mcp.tool()
 async def deploy_model_on_ai_services(
