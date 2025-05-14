@@ -1,11 +1,28 @@
-from mcp.server.fastmcp import FastMCP, Context
-import requests
-import os
-from dotenv import load_dotenv
 import logging
+import os
+from typing import Optional
+
+import requests
+from azure.mgmt.cognitiveservices.models import (
+    Deployment,
+    DeploymentModel,
+    DeploymentProperties,
+    DeploymentScaleSettings,
+    Sku,
+)
+from dotenv import load_dotenv
+from mcp.server.fastmcp import Context, FastMCP
 
 from .mcp_foundry_model.models import ModelDetails
-from .mcp_foundry_model.utils import get_client_headers_info, get_models_list, get_code_sample_for_github_model, get_code_sample_for_labs_model, get_code_sample_for_deployment_under_ai_services, get_ai_services_usage_list
+from .mcp_foundry_model.utils import (
+    deploy_inline_bicep_template,
+    get_client_headers_info,
+    get_code_sample_for_deployment_under_ai_services,
+    get_code_sample_for_github_model,
+    get_code_sample_for_labs_model,
+    get_cognitiveservices_client,
+    get_models_list,
+)
 
 load_dotenv()
 
@@ -92,7 +109,7 @@ async def list_azure_ai_foundry_labs_projects(ctx: Context):
     return project_response["projects"]
 
 @mcp.tool()
-async def list_deployments_from_azure_ai_services(ctx: Context):
+def list_deployments_from_azure_ai_services(subscription_id: str, resource_group: str, azure_ai_services_name: str) -> list[dict]:
     """
     Retrieves a list of deployments from Azure AI Services.
 
@@ -112,9 +129,9 @@ async def list_deployments_from_azure_ai_services(ctx: Context):
         - The list may change frequently as new deployments are added or existing ones are updated.
     """
 
-    headers = get_client_headers_info(ctx)
+    client = get_cognitiveservices_client(subscription_id)
 
-    pass
+    return [deployment.as_dict() for deployment in client.deployments.list(resource_group,account_name=azure_ai_services_name)]
 
 @mcp.tool()
 async def get_model_details_and_code_samples(model_name: str, ctx: Context):
@@ -186,12 +203,12 @@ async def get_model_details_and_code_samples(model_name: str, ctx: Context):
     if model_list_details["deployment_options"]["openai"]:
         if not model_details["type"] == "Free Playground":
             model_details["type"] = "OpenAI"
-        model_details["code_sample_azure"] = await get_code_sample_for_deployment_under_ai_services()
+        model_details["code_sample_azure"] = get_code_sample_for_deployment_under_ai_services(model_list_details["name"], model_list_details['inferenceTasks'][0], "<your-aoai-endpoint>", "<your-deployment-name>")
 
     # PayGo model add PayGo guidance to model details
     elif model_list_details["deployment_options"]["serverless_endpoint"]:
         model_details["type"] = "Serverless Endpoint"
-        model_details["code_sample_azure"] = await get_code_sample_for_deployment_under_ai_services()
+        model_details["code_sample_azure"] = get_code_sample_for_deployment_under_ai_services(model_list_details["name"],model_list_details['inferenceTasks'][0], "<your-aoai-endpoint>", "<your-deployment-name>")
 
     # Managed compute model add managed compute guidance to model details
     elif model_list_details["deployment_options"]["managed_compute"]:
@@ -200,18 +217,201 @@ async def get_model_details_and_code_samples(model_name: str, ctx: Context):
 
     return ModelDetails(**model_details)
 
+
 @mcp.tool()
-async def deploy_model_on_ai_services() -> str:
-    """
-    Deploys a model on Azure AI Services.
+async def deploy_model_on_ai_services(
+    deployment_name: str,
+    model_name: str,
+    model_format: str,
+    azure_ai_services_name: str,
+    resource_group: str,
+    subscription_id: str,
+    model_version: Optional[str] = None,
+    model_source: Optional[str] = None,
+    sku_name: Optional[str] = None,
+    sku_capacity: Optional[int] = None,
+    scale_type: Optional[str] = None,
+    scale_capacity: Optional[int] = None,
+) -> Deployment:
+    """Deploy a model to Azure AI.
 
     This function is used to deploy a model on Azure AI Services, allowing users to integrate the model into their applications and utilize its capabilities.
 
+    Args:
+        deployment_name: The name of the deployment.
+        model_name: The name of the model to deploy.
+        model_format: The format of the model (e.g. "OpenAI", "Meta", "Microsoft").
+        azure_ai_services_name: The name of the Azure AI services account to deploy to.
+        resource_group: The name of the resource group containing the Azure AI services account.
+        subscription_id: The Azure subscription ID.
+        model_version: (Optional) The version of the model to deploy. If not provided, the default version
+            will be used.
+        model_source: (Optional) The source of the model.
+        sku_name: (Optional) The SKU name for the deployment.
+        sku_capacity: (Optional) The SKU capacity for the deployment.
+        scale_type: (Optional) The scale type for the deployment.
+        scale_capacity: (Optional) The scale capacity for the deployment.
+
     Returns:
-        str: A string indicating the status of the deployment process.
+        Deployment: The deployment object created or updated.
     """
 
-    pass
+    model = DeploymentModel(
+        format=model_format,
+        name=model_name,
+        version=model_version,
+    )
+
+    sku: Optional[Sku] = None
+    scale_settings: Optional[DeploymentScaleSettings] = None
+    if model_source is not None:
+        model.source = model_source
+
+    if sku_name is not None:
+        sku = Sku(name=sku_name, capacity=sku_capacity)
+
+    if scale_type is not None:
+        scale_settings = DeploymentScaleSettings(
+            scale_type=scale_type, capacity=scale_capacity
+        )
+
+    properties = DeploymentProperties(
+        model=model,
+        scale_settings=scale_settings,
+    )
+
+    client = get_cognitiveservices_client(subscription_id)
+
+    return client.deployments.begin_create_or_update(
+        resource_group,
+        azure_ai_services_name,
+        deployment_name,
+        deployment=Deployment(properties=properties, sku=sku),
+        polling=False,
+    )
+
+
+@mcp.tool()
+def get_model_quotas(subscription_id: str, location: str) -> list[dict]:
+    """Get model quotas for a specific Azure location.
+
+    Args:
+        subscription_id: The Azure subscription ID.
+        location: The Azure location to retrieve quotas for.
+
+    Returns:
+        list: Returns a list of quota usages.
+    """
+
+    client = get_cognitiveservices_client(subscription_id)
+    return [usage.as_dict() for usage in client.usages.list(location)]
+
+@mcp.tool()
+def create_azure_ai_services_account(
+    subscription_id: str,
+    resource_group: str,
+    azure_ai_services_name: str,
+    location: str,
+) -> dict:
+    """Create an Azure AI services account.
+
+    The created Azure AI services account can be used to create a Foundry Project.
+
+    Args:
+        resource_group: The name of the resource group to create the account in.
+        azure_ai_services_name: The name of the Azure AI services account to create.
+        location: The Azure region to create the account in.
+        sku_name: The SKU name for the account (default is "S0").
+        tags: Optional tags to apply to the account.
+
+    Returns:
+        dict: The created Azure AI services account.
+    """
+
+    bicep_template = f"""
+param ai_services_name string = '{azure_ai_services_name}'
+param location string = 'eastus'
+
+resource account 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' = {{
+  name: ai_services_name
+  location: location
+  identity: {{
+    type: 'SystemAssigned'
+  }}
+  kind: 'AIServices'
+  sku: {{
+    name: 'S0'
+  }}
+  properties: {{
+    // Networking
+    publicNetworkAccess: 'Enabled'
+
+    // Specifies whether this resource support project management as child resources, used as containers for access management, data isolation, and cost in AI Foundry.
+    allowProjectManagement: true
+
+    // Defines developer API endpoint subdomain
+    customSubDomainName: ai_services_name
+
+    // Auth
+    disableLocalAuth: false
+  }}
+}}
+"""
+
+    # TODO: Use the Python SDK once the update is released
+    deploy_inline_bicep_template(subscription_id, resource_group, bicep_template)
+
+    client = get_cognitiveservices_client(subscription_id)
+
+    return client.accounts.get(resource_group, azure_ai_services_name)
+
+
+@mcp.tool()
+def create_foundry_project(
+    subscription_id: str,
+    resource_group: str,
+    azure_ai_services_name: str,
+    project_name: str,
+    location: str = "eastus",
+) -> None:
+    """Create an Azure AI Foundry Project.
+
+    Args:
+        subscription_id: The ID of the subscription to create the account in.
+        resource_group: The name of the resource group to create the account in.
+        azure_ai_services_name: The name of the Azure AI services to link the project to.
+            The project must have been created with allowProjectManagement set to "true".
+        project_name: The name of the project to create.
+        location: The Azure region to create the account in.
+
+    Returns:
+        dict: The created Azure AI services account.
+    """
+
+    bicep_template = f"""
+param ai_services_name string = '{azure_ai_services_name}'
+param location string = '{location}'
+param defaultProjectName string = '{project_name}'
+
+
+resource account 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' existing = {{
+  name: ai_services_name
+}}
+
+resource project 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-preview' = {{
+  name: defaultProjectName
+  parent: account
+  location: location
+
+  identity: {{
+    type: 'SystemAssigned'
+  }}
+  properties: {{  }}
+}}
+"""
+
+    # TODO: Use the Python SDK once the update is released
+    return deploy_inline_bicep_template(subscription_id, resource_group, bicep_template)
 
 @mcp.tool()
 def get_prototyping_instructions_for_github_and_labs(ctx: Context) -> str:
