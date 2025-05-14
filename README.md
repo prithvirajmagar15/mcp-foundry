@@ -39,30 +39,58 @@ Edit `mcp.json` to configure server options and tool settings.
 
 ### Quick Start
 
-[![Open in GitHub Codespaces](https://img.shields.io/static/v1?style=for-the-badge&label=GitHub+Codespaces&message=Open&color=brightgreen&logo=github)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=599293758&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fdevcontainer.json&location=WestUs2)
-[![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/azure-samples/azure-search-openai-demo)
+[![Install in VS Code](https://img.shields.io/static/v1?style=for-the-badge&label=Install+in+VS+Code&message=Open&color=007ACC&logo=visualstudiocode)](https://insiders.vscode.dev/redirect/mcp/install?name=Azure%20Foundry%20MCP%20Server&config=%7B%22command%22%3A%22pipx%22%2C%22args%22%3A%5B%22run%22%2C%22--no-cache%22%2C%22--spec%22%2C%22git%2Bhttps%3A%2F%2Fgithub.com%2Fazure-ai-foundry%2Fmcp-foundry.git%22%2C%22run-azure-foundry-mcp%22%5D%7D)
+[![Use The Template](https://img.shields.io/static/v1?style=for-the-badge&label=Use+The+Template&message=GitHub&color=181717&logo=github)](https://github.com/azure-ai-foundry/foundry-models-playground/generate)
 
-### GitHub Codespaces
 
-- Open this repo in Codespaces and run:
-  ```sh
-  python __main__.py
-  ```
 
-### VS Code
+---
 
-- Open in VS Code and run:
-  ```sh
-  python __main__.py
-  ```
+### Manual Setup
 
-### Docker
+#### 1. Install Python and pipx
 
-- Build and run:
-  ```sh
-  docker build -t mcp/foundry .
-  docker run -it --rm mcp/foundry
-  ```
+Make sure you have **Python** installed along with **pipx**.  
+Most modern Python installations include `pipx`, but if you don’t have it, you can install it with:
+
+```bash
+python -m pip install --user pipx
+python -m pipx ensurepath
+```
+
+---
+
+#### 2. Configure Your MCP Client
+
+Open the **MCP settings** in your client of choice.  
+Follow the appropriate link below for detailed instructions:
+
+- [Visual Studio Code – Copilot Chat](https://code.visualstudio.com/docs/copilot/chat/mcp-servers)
+- [Claude](https://modelcontextprotocol.io/quickstart/user)
+- [Cursor](https://docs.cursor.com/context/model-context-protocol)
+
+---
+
+#### 3. Add Foundry Labs MCP Entry
+
+Copy and paste the following JSON block into your MCP client’s configuration:
+
+```json
+"MCP Server For Foundry Labs": {
+  "command": "pipx",
+  "args": [
+    "run",
+    "--no-cache"
+    "--spec",
+    "git+https://github.com/azure-ai-foundry/mcp-foundry.git",
+    "run-azure-foundry-mcp"
+  ]
+}
+```
+
+> This will automatically install and run the MCP server for Foundry Labs using `pipx`.
+
+---
 
 ## License
 
