@@ -3,8 +3,8 @@ import requests
 import os
 from dotenv import load_dotenv
 
-from mcp_foundry_model.models import ModelDetails
-from mcp_foundry_model.utils import get_client_headers_info, get_models_list, get_code_sample_for_github_model, get_code_sample_for_labs_model, get_code_sample_for_deployment_under_ai_services, get_ai_services_usage_list
+from .mcp_foundry_model.models import ModelDetails
+from .mcp_foundry_model.utils import get_client_headers_info, get_models_list, get_code_sample_for_github_model, get_code_sample_for_labs_model, get_code_sample_for_deployment_under_ai_services, get_ai_services_usage_list
 
 load_dotenv()
 
