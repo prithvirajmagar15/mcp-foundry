@@ -26,5 +26,5 @@ def test_get_models_list_no_filters():
 
 def test_get_models_list_free_playground():
     mock_ctx = _mock_ctx()
-    models = get_models_list(mock_ctx, supports_free_playground=True)
+    models = get_models_list(mock_ctx, search_for_free_playground=True)
     assert isinstance(models, ModelsList)

@@ -3,8 +3,12 @@ from mcp.server.fastmcp import Context
 from mcp_foundry.mcp_foundry_model.models import ModelsList
 import os
 import dotenv
+import logging
 
 dotenv.load_dotenv()
+
+logger = logging.getLogger("mcp_foundry")
+logging.basicConfig(level=logging.DEBUG)
 
 labs_api_url = os.environ.get("LABS_API_URL", "https://labs-mcp-api.azurewebsites.net/api/v1")
 
@@ -20,8 +24,8 @@ def get_client_headers_info(ctx):
     }
     return headers
  
-def get_models_list(ctx: Context, supports_free_playground: bool = None, publisher_name: str = "", license_name: str = "", 
-                    max_pages: int = 5, model_name: str = None) -> ModelsList:
+def get_models_list(ctx: Context, search_for_free_playground: bool = False, publisher_name: str = "", license_name: str = "", 
+                    max_pages: int = 10, model_name: str = "") -> ModelsList:
     """Get a list of all supported models from Azure AI Foundry with optional filters."""
     url = "https://api.catalog.azureml.ms/asset-gallery/v1.0/models"
     headers = get_client_headers_info(ctx)
@@ -31,28 +35,30 @@ def get_models_list(ctx: Context, supports_free_playground: bool = None, publish
     # Always include 'latest' label
     filters.append({"field": "labels", "values": ["latest"], "operator": "eq"})
 
-    if supports_free_playground is True:
+    # Only add the freePlayground filter if the value is exactly True
+    # If search_for_free_playground is False or None, do not add any filter for it
+    if search_for_free_playground is True:
         filters.append({
             "field": "freePlayground",
             "values": ["true"],
             "operator": "eq"
         })
 
-    if publisher_name:
+    if publisher_name is not None and publisher_name != "":
         filters.append({
             "field": "publisher",
             "values": [publisher_name],
             "operator": "contains"
         })
 
-    if license_name:
+    if license_name is not None and license_name != "":
         filters.append({
             "field": "license",
             "values": [license_name],
             "operator": "contains"
         })
 
-    if model_name:
+    if model_name is not None and model_name != "":
         filters.append({
             "field": "name",
             "values": [model_name],
@@ -60,78 +66,118 @@ def get_models_list(ctx: Context, supports_free_playground: bool = None, publish
         })
 
     body = {"filters": filters}
+    logger.info(f"Request body: {body}")
 
     models_list = {"total_models_count": 0,
                    "fetched_models_count": 0, "summaries": []}
 
     page_count = 0
 
-    while True and page_count < max_pages:
-        page_count += 1
-        response = requests.post(url, json=body, headers=headers)
-        res_json = response.json()
+    try:
+        while True and page_count < max_pages:
+            page_count += 1
+            try:
+                response = requests.post(url, json=body, headers=headers)
+                response.raise_for_status()
+            except Exception as e:
+                logger.error(f"Exception during POST request on page {page_count}: {e}")
+                break
+            try:
+                res_json = response.json()
+            except Exception as e:
+                logger.error(f"Exception parsing JSON response on page {page_count}: {e}")
+                break
 
-        if "summaries" not in res_json:
-            break
+            logger.info(f"### Page: {page_count}")
+            # logger.debug(f"Response body: {res_json}")
 
-        for summary in res_json["summaries"]:
-            summary["deployment_options"] = {
-                "openai": False,
-                "serverless_endpoint": False,
-                "managed_compute": False,
-                "free_playground": False,
-            }
+            if "summaries" not in res_json:
+                logger.warning(f"No 'summaries' in response on page {page_count}")
+                break
 
-            if "playgroundLimits" in summary:
-                summary["deployment_options"]['free_playground'] = True
+            for summary in res_json["summaries"]:
+                try:
+                    summary["deployment_options"] = {
+                        "openai": False,
+                        "serverless_endpoint": False,
+                        "managed_compute": False,
+                        "free_playground": False,
+                    }
 
-            publisher = summary.get("publisher", "")
-            if publisher and publisher.lower() == "openai":
-                summary["deployment_options"]['openai'] = True
-            else:
-                if "standard-paygo" in summary.get("azureOffers"):
-                    summary["deployment_options"]['serverless_endpoint'] = True
-                if "VM" in summary.get("azureOffers") or "VM-withSurcharge" in summary.get("azureOffers"):
-                    summary["deployment_options"]['managed_compute'] = True
+                    if "playgroundLimits" in summary:
+                        summary["deployment_options"]['free_playground'] = True
 
-        models_list["total_models_count"] = res_json.get("totalCount", 0)
-        models_list["summaries"].extend(res_json["summaries"])
+                    publisher = summary.get("publisher", "")
+                    azureOffers = summary.get("azureOffers", [])
+                    # Even if publisher and azureOffers are present, they can be None
+                    # or empty, so we need to fall back to default values
+                    if not publisher:
+                        publisher = ""
+                    if not azureOffers:
+                        azureOffers = []
 
-        # If there are no more pages, break the loop
-        if not res_json.get("continuationToken", False):
-            break
+                    if publisher and publisher.lower() == "openai":
+                        summary["deployment_options"]['openai'] = True
+                    else:
+                        if "standard-paygo" in azureOffers:
+                            summary["deployment_options"]['serverless_endpoint'] = True
+                        if "VM" in azureOffers or "VM-withSurcharge" in azureOffers:
+                            summary["deployment_options"]['managed_compute'] = True
+                except Exception as e:
+                    logger.error(f"Exception processing summary on page {page_count}: {e}")
+                    logger.error(f"publisher: {publisher}")
+                    logger.error(f"azureOffers: {azureOffers}")
+                    logger.error(f"Summary: {summary}")
 
-        # Update the body for the next request
-        body["continuationToken"] = res_json.get("continuationToken")
+            models_list["total_models_count"] = res_json.get("totalCount", 0)
+            models_list["summaries"].extend(res_json["summaries"])
+
+            # If there are no more pages, break the loop
+            if not res_json.get("continuationToken", False):
+                break
+
+            # Update the body for the next request
+            body["continuationToken"] = res_json.get("continuationToken")
+    except Exception as e:
+        logger.error(f"Exception in get_models_list main loop: {e}")
 
     models_list["fetched_models_count"] = len(models_list["summaries"])
 
-    return ModelsList(**models_list)
+    # logging the total models count and fetched models count
+    logger.info(f"Total models count: {models_list['total_models_count']}")
+    logger.info(f"Fetched models count: {models_list['fetched_models_count']}")
+
+    try:
+        return ModelsList(**models_list)
+    except Exception as e:
+        logger.error(f"Exception constructing ModelsList: {e}")
+        return None
 
 async def get_code_sample_for_github_model(publisher_name: str, model_name: str, ctx: Context) -> str:
     headers = get_client_headers_info(ctx)
-
-    response = requests.get(f"{labs_api_url}/resources/resource/gh_guidance.md", headers=headers)
-    if response.status_code != 200:
-        return f"Error fetching projects from API: {response.status_code}"
-
-    guidance = response.json()
-    GH_GUIDANCE = guidance["resource"]["content"]
-
-    guidance = GH_GUIDANCE.replace("{{inference_model_name}}", f"{publisher_name}/{model_name}")
-
-    return guidance
+    try:
+        response = requests.get(f"{labs_api_url}/resources/resource/gh_guidance.md", headers=headers)
+        if response.status_code != 200:
+            return f"Error fetching projects from API: {response.status_code}"
+        guidance = response.json()
+        GH_GUIDANCE = guidance["resource"]["content"]
+        guidance = GH_GUIDANCE.replace("{{inference_model_name}}", f"{publisher_name}/{model_name}")
+        return guidance
+    except Exception as e:
+        logger.error(f"Exception in get_code_sample_for_github_model: {e}")
+        return f"Exception: {e}"
 
 async def get_code_sample_for_labs_model(model_name: str, ctx: Context) -> str:
     headers = get_client_headers_info(ctx)
-
-    response = requests.get(f"{labs_api_url}/projects/{model_name}/implementation", headers=headers)
-    if response.status_code != 200:
-        return f"Error fetching projects from API: {response.status_code}"
-
-    project_response = response.json()
-
-    return project_response['project']
+    try:
+        response = requests.get(f"{labs_api_url}/projects/{model_name}/implementation", headers=headers)
+        if response.status_code != 200:
+            return f"Error fetching projects from API: {response.status_code}"
+        project_response = response.json()
+        return project_response['project']
+    except Exception as e:
+        logger.error(f"Exception in get_code_sample_for_labs_model: {e}")
+        return f"Exception: {e}"
 
 async def  get_code_sample_for_deployment_under_ai_services() -> str:
     """
