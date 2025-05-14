@@ -1,6 +1,6 @@
 import pytest
-from mcp_foundry_model.models import ModelsList
-from mcp_foundry_model.utils import get_models_list
+from mcp_foundry.mcp_foundry_model.models import ModelsList
+from mcp_foundry.mcp_foundry_model.utils import get_models_list
 
 def _mock_ctx():
     """Mock context for testing."""

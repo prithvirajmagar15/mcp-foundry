@@ -1,6 +1,6 @@
 import requests
 from mcp.server.fastmcp import Context
-from mcp_foundry_model.models import ModelsList
+from mcp_foundry.mcp_foundry_model.models import ModelsList
 import os
 import dotenv
 
