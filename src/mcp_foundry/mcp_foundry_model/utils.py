@@ -1,9 +1,13 @@
-import requests
-from mcp.server.fastmcp import Context
-from mcp_foundry.mcp_foundry_model.models import ModelsList
-import os
-import dotenv
 import logging
+import os
+
+import dotenv
+import requests
+from azure.identity import DefaultAzureCredential
+from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
+from mcp.server.fastmcp import Context
+
+from mcp_foundry.mcp_foundry_model.models import ModelsList
 
 dotenv.load_dotenv()
 
@@ -179,17 +183,81 @@ async def get_code_sample_for_labs_model(model_name: str, ctx: Context) -> str:
         logger.error(f"Exception in get_code_sample_for_labs_model: {e}")
         return f"Exception: {e}"
 
-async def  get_code_sample_for_deployment_under_ai_services() -> str:
-    """
-    Retrieves code samples for deploying models under Azure AI Services.
+def get_cognitiveservices_client(
+    subscription_id: str,
+) -> CognitiveServicesManagementClient:
+    return CognitiveServicesManagementClient(
+        credential=DefaultAzureCredential(), subscription_id=subscription_id
+    )
+
+async def  get_code_sample_for_deployment_under_ai_services(
+    deployment_name: str,
+    azure_ai_services_name: str,
+    resource_group: str,
+    subscription_id: str,
+) -> str:
+    """Get a code snippet for a specific deployment.
 
     This function is used to get code examples and implementation instructions for deploying models in Azure AI Services, helping users understand how to integrate and use the models effectively in their applications.
+    Args:
+        deployment_name: The name of the deployment.
+        azure_ai_services_name: The name of the Azure AI services account.
+        resource_group: The name of the resource group containing the Azure AI services account.
+        subscription_id: The Azure subscription ID.
 
     Returns:
-        str: A string containing the code samples and usage instructions for deploying models under Azure AI Services.
+        str: A rendered code snippet demonstrating usage of the deployment.
     """
 
-    pass
+    client = get_cognitiveservices_client(subscription_id)
+    account = client.accounts.get(
+        account_name=azure_ai_services_name, resource_group_name=resource_group
+    )
+    endpoint: str = account.properties.endpoint
+
+    deployment: Deployment = client.deployments.get(
+        account_name=azure_ai_services_name,
+        resource_group_name=resource_group,
+        deployment_name=deployment_name,
+    )
+
+    model_name: str = deployment.properties.model.name
+
+    ejs_template = (
+        requests.get(
+            "https://ai.azure.com/modelcache/code2/oai-sdk-key-auth/en/chat-completion-python-template.md",
+        )
+    ).text
+
+    model_template_config = (
+        requests.get(
+            f"https://ai.azure.com/modelcache/widgets/en/Serverless/azure-openai/{model_name}.json"
+        )
+    ).json()
+
+    naive_jinja2_template = re.sub(r"<%=\s+([\w\.]+)\s%>", r"{{ \1|e }}", ejs_template)
+
+    env = SandboxedEnvironment()
+
+    template = env.from_string(naive_jinja2_template)
+
+    example_content = [
+        history["content"]
+        for history in model_template_config[0]["config"]["examples"][0]["chatHistory"]
+    ]
+
+    return template.render(
+        **{
+            "endpointUrl": endpoint,
+            "deploymentName": deployment_name,
+            "modelName": model_name,
+            "example": {
+                "example_1": example_content[0],
+                "example_2": example_content[1],
+                "example_3": example_content[2],
+            },
+        }
+    )
 
 async def get_ai_services_usage_list(ctx: Context) -> str:
     """

@@ -1,11 +1,27 @@
-from mcp.server.fastmcp import FastMCP, Context
-import requests
-import os
-from dotenv import load_dotenv
 import logging
+import os
+from typing import Optional
+
+import requests
+from azure.mgmt.cognitiveservices.models import (
+    Deployment,
+    DeploymentModel,
+    DeploymentProperties,
+    DeploymentScaleSettings,
+    Sku,
+)
+from dotenv import load_dotenv
+from mcp.server.fastmcp import Context, FastMCP
 
 from .mcp_foundry_model.models import ModelDetails
-from .mcp_foundry_model.utils import get_client_headers_info, get_models_list, get_code_sample_for_github_model, get_code_sample_for_labs_model, get_code_sample_for_deployment_under_ai_services, get_ai_services_usage_list
+from .mcp_foundry_model.utils import (
+    get_client_headers_info,
+    get_code_sample_for_deployment_under_ai_services,
+    get_code_sample_for_github_model,
+    get_code_sample_for_labs_model,
+    get_cognitiveservices_client,
+    get_models_list,
+)
 
 load_dotenv()
 
@@ -201,17 +217,92 @@ async def get_model_details_and_code_samples(model_name: str, ctx: Context):
     return ModelDetails(**model_details)
 
 @mcp.tool()
-async def deploy_model_on_ai_services() -> str:
-    """
-    Deploys a model on Azure AI Services.
+async def deploy_model_on_ai_services(
+    deployment_name: str,
+    model_name: str,
+    model_format: str,
+    azure_ai_services_name: str,
+    resource_group: str,
+    subscription_id: str,
+    model_version: Optional[str] = None,
+    model_source: Optional[str] = None,
+    sku_name: Optional[str] = None,
+    sku_capacity: Optional[int] = None,
+    scale_type: Optional[str] = None,
+    scale_capacity: Optional[int] = None,
+) -> Deployment:
+    """Deploy a model to Azure AI.
 
     This function is used to deploy a model on Azure AI Services, allowing users to integrate the model into their applications and utilize its capabilities.
 
+    Args:
+        deployment_name: The name of the deployment.
+        model_name: The name of the model to deploy.
+        model_format: The format of the model (e.g. "OpenAI", "Meta", "Microsoft").
+        azure_ai_services_name: The name of the Azure AI services account to deploy to.
+        resource_group: The name of the resource group containing the Azure AI services account.
+        subscription_id: The Azure subscription ID.
+        model_version: (Optional) The version of the model to deploy. If not provided, the default version
+            will be used.
+        model_source: (Optional) The source of the model.
+        sku_name: (Optional) The SKU name for the deployment.
+        sku_capacity: (Optional) The SKU capacity for the deployment.
+        scale_type: (Optional) The scale type for the deployment.
+        scale_capacity: (Optional) The scale capacity for the deployment.
+
     Returns:
-        str: A string indicating the status of the deployment process.
+        Deployment: The deployment object created or updated.
     """
 
-    pass
+    model = DeploymentModel(
+        format=model_format,
+        name=model_name,
+        version=model_version,
+    )
+
+    sku: Optional[Sku] = None
+    scale_settings: Optional[DeploymentScaleSettings] = None
+    if model_source is not None:
+        model.source = model_source
+
+    if sku_name is not None:
+        sku = Sku(name=sku_name, capacity=sku_capacity)
+
+    if scale_type is not None:
+        scale_settings = DeploymentScaleSettings(
+            scale_type=scale_type, capacity=scale_capacity
+        )
+
+    properties = DeploymentProperties(
+        model=model,
+        scale_settings=scale_settings,
+    )
+
+    client = get_cognitiveservices_client(subscription_id)
+
+    return client.deployments.begin_create_or_update(
+        resource_group,
+        azure_ai_services_name,
+        deployment_name,
+        deployment=Deployment(properties=properties, sku=sku),
+        polling=False,
+    )
+
+
+@mcp.tool()
+def get_model_quotas(subscription_id: str, location: str) -> list[dict]:
+    """Get model quotas for a specific Azure location.
+
+    Args:
+        subscription_id: The Azure subscription ID.
+        location: The Azure location to retrieve quotas for.
+
+    Returns:
+        list: Returns a list of quota usages.
+    """
+
+    client = get_cognitiveservices_client(subscription_id)
+    return [usage.as_dict() for usage in client.usages.list(location)]
 
 @mcp.tool()
 def get_prototyping_instructions_for_github_and_labs(ctx: Context) -> str:
