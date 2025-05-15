@@ -4,9 +4,10 @@ from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("azure-ai-foundry-mcp-server")
 
-def auto_import_tools_modules(base_package: str):
+def auto_import_modules(base_package: str, targets: list[str]):
     """
-    Automatically imports `tools.py` from each subpackage of base_package
+    Automatically imports specified Python modules (e.g., tools.py, resources.py, prompts.py)
+    from each subpackage of base_package.
     """
     package = importlib.import_module(base_package)
     package_path = package.__path__[0]
@@ -17,14 +18,15 @@ def auto_import_tools_modules(base_package: str):
         if not os.path.isdir(sub_path) or submodule.startswith("__"):
             continue
 
-        tools_module = f"{base_package}.{submodule}.tools"
-        try:
-            importlib.import_module(tools_module)
-            print(f"✅ Imported: {tools_module}")
-        except ModuleNotFoundError:
-            print(f"⚠️ Skipping {tools_module} (not found)")
-        except Exception as e:
-            print(f"❌ Error importing {tools_module}: {e}")
+        for target in targets:
+            module_name = f"{base_package}.{submodule}.{target}"
+            try:
+                importlib.import_module(module_name)
+                print(f"✅ Imported: {module_name}")
+            except ModuleNotFoundError:
+                print(f"⚠️ Skipping {module_name} (not found)")
+            except Exception as e:
+                print(f"❌ Error importing {module_name}: {e}")
 
 # Run this on startup
-auto_import_tools_modules("mcp_foundry")
+auto_import_modules("mcp_foundry", targets=["tools", "resources", "prompts"])
