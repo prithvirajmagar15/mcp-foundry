@@ -2,8 +2,13 @@
   "description": "MCP Foundry Server configuration file.",
   "servers": {
     "foundry": {
-      "command": "python",
-      "args": ["__main__.py"]
+      "command": "pipx",
+      "args": [
+        "run",
+        "--spec",
+        "git+https://github.com/azure-ai-foundry/mcp-foundry.git",
+        "run-azure-foundry-mcp"
+      ]
     }
   }
 }
