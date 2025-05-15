@@ -3,19 +3,15 @@ import contextlib
 import json
 import logging
 import os
-import re
 import subprocess
 import sys
 import tempfile
-from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
-import httpx
 
 # Azure AI Evaluation Imports
 from azure.ai.evaluation import (
     # Agent Converter
-    AIAgentConverter,
     BleuScoreEvaluator,
     CodeVulnerabilityEvaluator,
     CoherenceEvaluator,
@@ -44,15 +40,13 @@ from azure.ai.evaluation import (
     evaluate,
 )
 from azure.ai.projects.aio import AIProjectClient
-from azure.ai.projects.models import Agent, ConnectionType, MessageRole
+from azure.ai.projects.models import Agent, MessageRole
 
 # Azure Imports
 from azure.identity import DefaultAzureCredential
 from azure.identity.aio import DefaultAzureCredential as AsyncDefaultAzureCredential
-from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
 from dotenv import load_dotenv
-from jinja2.sandbox import SandboxedEnvironment
-from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.fastmcp import FastMCP
 
 # Configure logging
 logging.basicConfig(
