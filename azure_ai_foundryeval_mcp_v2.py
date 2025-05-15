@@ -56,18 +56,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger("azure_ai_foundry_mcp")
 
+
 # Configure PromptFlow logging to go to stderr
 def configure_promptflow_logging():
     import logging
-    promptflow_logger = logging.getLogger('promptflow')
+
+    promptflow_logger = logging.getLogger("promptflow")
     for handler in promptflow_logger.handlers:
         promptflow_logger.removeHandler(handler)
     handler = logging.StreamHandler(sys.stderr)
     handler.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     handler.setFormatter(formatter)
     promptflow_logger.addHandler(handler)
     promptflow_logger.propagate = False  # Don't propagate to root logger
+
 
 # Call this function early in your script's execution
 configure_promptflow_logging()
@@ -79,12 +82,7 @@ load_dotenv()
 mcp = FastMCP(
     "azure-ai-foundry",
     description="MCP server for Azure AI Foundry Evaluation and Agent Service",
-    dependencies=[
-        "azure-identity", 
-        "python-dotenv", 
-        "azure-ai-projects", 
-        "azure-ai-evaluation"
-    ],
+    dependencies=["azure-identity", "python-dotenv", "azure-ai-projects", "azure-ai-evaluation"],
 )
 
 #######################
@@ -95,14 +93,14 @@ mcp = FastMCP(
 try:
     # Sync credential for evaluations
     credential = DefaultAzureCredential()
-    
+
     # Credentials for Azure AI project
     azure_ai_project = {
         "subscription_id": os.environ.get("AZURE_SUBSCRIPTION_ID"),
         "resource_group_name": os.environ.get("AZURE_RESOURCE_GROUP"),
         "project_name": os.environ.get("AZURE_PROJECT_NAME"),
     }
-    
+
     # Azure OpenAI model configuration
     model_config = {
         "azure_endpoint": os.environ.get("AZURE_OPENAI_ENDPOINT"),
@@ -110,24 +108,24 @@ try:
         "azure_deployment": os.environ.get("AZURE_OPENAI_DEPLOYMENT"),
         "api_version": os.environ.get("AZURE_OPENAI_API_VERSION"),
     }
-    
+
     # Directory for evaluation data files
     eval_data_dir = os.environ.get("EVAL_DATA_DIR", ".")
-    
+
     # Azure AI Agent configuration
     project_connection_string = os.environ.get("PROJECT_CONNECTION_STRING")
     default_agent_id = os.environ.get("DEFAULT_AGENT_ID")
-    
+
     # Initialization flags
     evaluation_initialized = True
     if not all([azure_ai_project["subscription_id"], model_config["azure_endpoint"]]):
         evaluation_initialized = False
         logger.warning("Some evaluation credentials are missing, some evaluators may not work")
-    
+
     agent_initialized = bool(project_connection_string)
     if not agent_initialized:
         logger.warning("PROJECT_CONNECTION_STRING is missing, agent features will not work")
-    
+
 except Exception as e:
     logger.error(f"Initialization error: {str(e)}")
     credential = None
@@ -140,13 +138,14 @@ except Exception as e:
 ai_client = None
 agent_cache = {}
 
+
 async def initialize_agent_client():
     """Initialize the Azure AI Agent client asynchronously."""
     global ai_client
-    
+
     if not agent_initialized:
         return False
-        
+
     try:
         async_credential = AsyncDefaultAzureCredential()
         ai_client = AIProjectClient.from_connection_string(
@@ -158,6 +157,7 @@ async def initialize_agent_client():
     except Exception as e:
         logger.error(f"Failed to initialize AIProjectClient: {str(e)}")
         return False
+
 
 #######################
 # EVALUATOR MAPPINGS  #
@@ -184,14 +184,14 @@ text_evaluator_map = {
     "ungrounded_attributes": UngroundedAttributesEvaluator,
     "code_vulnerability": CodeVulnerabilityEvaluator,
     "qa": QAEvaluator,
-    "content_safety": ContentSafetyEvaluator
+    "content_safety": ContentSafetyEvaluator,
 }
 
 # Map agent evaluator names to classes
 agent_evaluator_map = {
     "intent_resolution": IntentResolutionEvaluator,
     "tool_call_accuracy": ToolCallAccuracyEvaluator,
-    "task_adherence": TaskAdherenceEvaluator
+    "task_adherence": TaskAdherenceEvaluator,
 }
 
 # Required parameters for each text evaluator
@@ -215,68 +215,79 @@ text_evaluator_requirements = {
     "ungrounded_attributes": {"query": "Required", "response": "Required", "context": "Required"},
     "code_vulnerability": {"query": "Required", "response": "Required"},
     "qa": {"query": "Required", "response": "Required", "context": "Required", "ground_truth": "Required"},
-    "content_safety": {"query": "Required", "response": "Required"}
+    "content_safety": {"query": "Required", "response": "Required"},
 }
 
 # Required parameters for each agent evaluator
 agent_evaluator_requirements = {
     "intent_resolution": {
         "query": "Required (Union[str, list[Message]])",
-        "response": "Required (Union[str, list[Message]])", 
-        "tool_definitions": "Optional (list[ToolDefinition])"
+        "response": "Required (Union[str, list[Message]])",
+        "tool_definitions": "Optional (list[ToolDefinition])",
     },
     "tool_call_accuracy": {
         "query": "Required (Union[str, list[Message]])",
         "response": "Optional (Union[str, list[Message]])",
         "tool_calls": "Optional (Union[dict, list[ToolCall]])",
-        "tool_definitions": "Required (list[ToolDefinition])"
+        "tool_definitions": "Required (list[ToolDefinition])",
     },
     "task_adherence": {
         "query": "Required (Union[str, list[Message]])",
         "response": "Required (Union[str, list[Message]])",
-        "tool_definitions": "Optional (list[ToolCall])"
-    }
+        "tool_definitions": "Optional (list[ToolCall])",
+    },
 }
 
 ######################
 # HELPER FUNCTIONS   #
 ######################
 
+
 def create_text_evaluator(evaluator_name: str) -> Any:
     """Create and configure an appropriate text evaluator instance."""
     if evaluator_name not in text_evaluator_map:
         raise ValueError(f"Unknown text evaluator: {evaluator_name}")
-    
+
     EvaluatorClass = text_evaluator_map[evaluator_name]
-    
+
     # AI-assisted quality evaluators need a model
     if evaluator_name in ["groundedness", "relevance", "coherence", "fluency", "similarity"]:
         if not model_config or not all([model_config["azure_endpoint"], model_config["api_key"]]):
             raise ValueError(f"Model configuration required for {evaluator_name} evaluator")
         return EvaluatorClass(model_config)
-    
+
     # AI-assisted risk and safety evaluators need Azure credentials
-    elif evaluator_name in ["violence", "sexual", "self_harm", "hate_unfairness", 
-                        "indirect_attack", "protected_material", "ungrounded_attributes", 
-                        "code_vulnerability", "content_safety"]:
+    elif evaluator_name in [
+        "violence",
+        "sexual",
+        "self_harm",
+        "hate_unfairness",
+        "indirect_attack",
+        "protected_material",
+        "ungrounded_attributes",
+        "code_vulnerability",
+        "content_safety",
+    ]:
         if credential is None or azure_ai_project is None:
             raise ValueError(f"Azure credentials required for {evaluator_name} evaluator")
         return EvaluatorClass(credential=credential, azure_ai_project=azure_ai_project)
-    
+
     # NLP evaluators don't need special configuration
     else:
         return EvaluatorClass()
+
 
 def create_agent_evaluator(evaluator_name: str) -> Any:
     """Create and configure an appropriate agent evaluator instance."""
     if evaluator_name not in agent_evaluator_map:
         raise ValueError(f"Unknown agent evaluator: {evaluator_name}")
-    
+
     if not model_config or not all([model_config["azure_endpoint"], model_config["api_key"]]):
         raise ValueError(f"Model configuration required for {evaluator_name} evaluator")
-    
+
     EvaluatorClass = agent_evaluator_map[evaluator_name]
     return EvaluatorClass(model_config=model_config)
+
 
 async def get_agent(agent_id: str) -> Agent:
     """Get an agent by ID with simple caching."""
@@ -295,6 +306,7 @@ async def get_agent(agent_id: str) -> Agent:
         logger.error(f"Agent retrieval failed - ID: {agent_id}, Error: {str(e)}")
         raise ValueError(f"Agent not found or inaccessible: {agent_id}")
 
+
 async def query_agent(agent_id: str, query: str) -> Dict:
     """Query an Azure AI Agent and get the response with full thread/run data."""
     try:
@@ -306,9 +318,7 @@ async def query_agent(agent_id: str, query: str) -> Dict:
         thread_id = thread.id
 
         # Add message to thread
-        await ai_client.agents.create_message(
-            thread_id=thread_id, role=MessageRole.USER, content=query
-        )
+        await ai_client.agents.create_message(thread_id=thread_id, role=MessageRole.USER, content=query)
 
         # Process the run
         run = await ai_client.agents.create_run(thread_id=thread_id, agent_id=agent_id)
@@ -327,7 +337,7 @@ async def query_agent(agent_id: str, query: str) -> Dict:
                 "error": error_msg,
                 "thread_id": thread_id,
                 "run_id": run_id,
-                "result": f"Error: {error_msg}"
+                "result": f"Error: {error_msg}",
             }
 
         # Get the agent's response
@@ -344,9 +354,7 @@ async def query_agent(agent_id: str, query: str) -> Dict:
 
             # Collect citations
             for annotation in response_message.url_citation_annotations:
-                citation = (
-                    f"[{annotation.url_citation.title}]({annotation.url_citation.url})"
-                )
+                citation = f"[{annotation.url_citation.title}]({annotation.url_citation.url})"
                 if citation not in citations:
                     citations.append(citation)
 
@@ -361,42 +369,39 @@ async def query_agent(agent_id: str, query: str) -> Dict:
             "thread_id": thread_id,
             "run_id": run_id,
             "result": result.strip(),
-            "citations": citations
+            "citations": citations,
         }
 
     except Exception as e:
         logger.error(f"Agent query failed - ID: {agent_id}, Error: {str(e)}")
         raise
-    
+
+
 def az(*args: str) -> dict:
     """Run azure-cli and return output with improved error handling"""
     cmd = [sys.executable, "-m", "azure.cli", *args, "-o", "json"]
-    
+
     # Log the command that's about to be executed
     logger.warning(f"Attempting to run: {' '.join(cmd)}")
-    
+
     try:
         # Run with full logging
         result = subprocess.run(
             cmd,
             text=True,
             capture_output=True,
-            check=False  # Don't raise exception to see all errors
+            check=False,  # Don't raise exception to see all errors
         )
-        
+
         # Log the results
         logger.warning(f"Command exit code: {result.returncode}")
         logger.warning(f"Command stdout (first 100 chars): {result.stdout[:100] if result.stdout else 'Empty'}")
         logger.warning(f"Command stderr (first 100 chars): {result.stderr[:100] if result.stderr else 'Empty'}")
-        
+
         if result.returncode != 0:
             # Command failed
-            return {
-                "error": "Command failed",
-                "stderr": result.stderr,
-                "returncode": result.returncode
-            }
-        
+            return {"error": "Command failed", "stderr": result.stderr, "returncode": result.returncode}
+
         try:
             # Try to parse JSON
             return json.loads(result.stdout.strip())
@@ -404,20 +409,19 @@ def az(*args: str) -> dict:
             # JSON parsing failed
             return {
                 "error": f"Failed to parse JSON: {str(json_err)}",
-                "raw_output": result.stdout[:500]  # First 500 chars for debugging
+                "raw_output": result.stdout[:500],  # First 500 chars for debugging
             }
-            
+
     except Exception as e:
         # Catch all other exceptions
         logger.error(f"Exception executing command: {str(e)}")
-        return {
-            "error": f"Exception: {str(e)}",
-            "type": type(e).__name__
-        }
+        return {"error": f"Exception: {str(e)}", "type": type(e).__name__}
+
 
 ########################
 # TEXT EVALUATION TOOLS #
 ########################
+
 
 @mcp.tool()
 def list_text_evaluators() -> List[str]:
@@ -426,6 +430,7 @@ def list_text_evaluators() -> List[str]:
     """
     return list(text_evaluator_map.keys())
 
+
 @mcp.tool()
 def list_agent_evaluators() -> List[str]:
     """
@@ -433,11 +438,12 @@ def list_agent_evaluators() -> List[str]:
     """
     return list(agent_evaluator_map.keys())
 
+
 @mcp.tool()
 def get_text_evaluator_requirements(evaluator_name: str = None) -> Dict:
     """
     Get the required input fields for a specific text evaluator or all text evaluators.
-    
+
     Parameters:
     - evaluator_name: Optional name of evaluator. If None, returns requirements for all evaluators.
     """
@@ -448,11 +454,12 @@ def get_text_evaluator_requirements(evaluator_name: str = None) -> Dict:
     else:
         return text_evaluator_requirements
 
+
 @mcp.tool()
 def get_agent_evaluator_requirements(evaluator_name: str = None) -> Dict:
     """
     Get the required input fields for a specific agent evaluator or all agent evaluators.
-    
+
     Parameters:
     - evaluator_name: Optional name of evaluator. If None, returns requirements for all evaluators.
     """
@@ -463,17 +470,18 @@ def get_agent_evaluator_requirements(evaluator_name: str = None) -> Dict:
     else:
         return agent_evaluator_requirements
 
+
 @mcp.tool()
 def run_text_eval(
     evaluator_names: Union[str, List[str]],  # Single evaluator name or list of evaluator names
-    file_path: Optional[str] = None,  # Path to JSONL file 
+    file_path: Optional[str] = None,  # Path to JSONL file
     content: Optional[str] = None,  # JSONL content as a string (optional)
     include_studio_url: bool = True,  # Option to include studio URL in response
-    return_row_results: bool = False  # Option to include detailed row results
+    return_row_results: bool = False,  # Option to include detailed row results
 ) -> Dict:
     """
     Run one or multiple evaluators on a JSONL file or content string.
-    
+
     Parameters:
     - evaluator_names: Either a single evaluator name (string) or a list of evaluator names
     - file_path: Path to a JSONL file to evaluate (preferred for efficiency)
@@ -485,7 +493,7 @@ def run_text_eval(
     original_stdout = sys.stdout
     # Redirect stdout to stderr to prevent PromptFlow output from breaking MCP
     sys.stdout = sys.stderr
-    
+
     # Heartbeat mechanism
     import threading
     import time
@@ -505,30 +513,30 @@ def run_text_eval(
     # Start heartbeat thread
     heartbeat_thread = threading.Thread(target=send_heartbeats, daemon=True)
     heartbeat_thread.start()
-    
+
     try:
         if not evaluation_initialized:
             heartbeat_active = False  # Stop heartbeat
             return {"error": "Evaluation not initialized. Check environment variables."}
-        
+
         # Validate inputs
         if content is None and file_path is None:
             heartbeat_active = False  # Stop heartbeat
             return {"error": "Either file_path or content must be provided"}
-        
+
         # Convert single evaluator to list for unified processing
         if isinstance(evaluator_names, str):
             evaluator_names = [evaluator_names]
-        
+
         # Validate evaluator names
         for name in evaluator_names:
             if name not in text_evaluator_map:
                 heartbeat_active = False  # Stop heartbeat
                 return {"error": f"Unknown evaluator: {name}"}
-        
+
         # Variable to track if we need to clean up a temp file
         temp_file = None
-        
+
         try:
             # Determine which input to use (prioritize file_path for efficiency)
             input_file = None
@@ -545,80 +553,70 @@ def run_text_eval(
                     else:
                         heartbeat_active = False  # Stop heartbeat
                         return {"error": f"File not found: {file_path} (also checked in {data_dir})"}
-                    
+
                 # Count rows quickly using file iteration
-                with open(input_file, 'r', encoding='utf-8') as f:
+                with open(input_file, "r", encoding="utf-8") as f:
                     row_count = sum(1 for line in f if line.strip())
-                    
+
             elif content:
                 # Create temporary file for content string
-                fd, temp_file = tempfile.mkstemp(suffix='.jsonl')
+                fd, temp_file = tempfile.mkstemp(suffix=".jsonl")
                 os.close(fd)
-                
+
                 # Write content to temp file
-                with open(temp_file, 'w', encoding='utf-8') as f:
+                with open(temp_file, "w", encoding="utf-8") as f:
                     f.write(content)
-                    
+
                 input_file = temp_file
-                row_count = content.count('\n') + (0 if content.endswith('\n') else 1)
-                
+                row_count = content.count("\n") + (0 if content.endswith("\n") else 1)
+
             logger.info(f"Processing {row_count} rows for {len(evaluator_names)} evaluator(s)")
-            
+
             # Prepare evaluators
             evaluators = {}
             eval_config = {}
-            
+
             for name in evaluator_names:
                 # Create evaluator instance
                 evaluators[name] = create_text_evaluator(name)
-                
+
                 # Set up column mapping for this evaluator
                 requirements = text_evaluator_requirements[name]
                 column_mapping = {}
                 for field, requirement in requirements.items():
                     if requirement == "Required":
-                        column_mapping[field] = f"${{data.{field}}}"                
-                eval_config[name] = {
-                    "column_mapping": column_mapping
-                }
-            
+                        column_mapping[field] = f"${{data.{field}}}"
+                eval_config[name] = {"column_mapping": column_mapping}
+
             # Prepare evaluation args
-            eval_args = {
-                "data": input_file,
-                "evaluators": evaluators,
-                "evaluator_config": eval_config
-            }
-            
+            eval_args = {"data": input_file, "evaluators": evaluators, "evaluator_config": eval_config}
+
             # Add Azure AI project info if initialized
             if azure_ai_project and include_studio_url:
                 eval_args["azure_ai_project"] = azure_ai_project
-            
+
             # Run evaluation with additional stdout redirection for extra safety
             with contextlib.redirect_stdout(sys.stderr):
                 result = evaluate(**eval_args)
-            
+
             # Prepare response
-            response = {
-                "evaluators": evaluator_names,
-                "row_count": row_count,
-                "metrics": result.get("metrics", {})
-            }
-            
+            response = {"evaluators": evaluator_names, "row_count": row_count, "metrics": result.get("metrics", {})}
+
             # Only include detailed row results if explicitly requested
             if return_row_results:
                 response["row_results"] = result.get("rows", [])
-            
+
             # Include studio URL if available
             if include_studio_url and "studio_url" in result:
                 response["studio_url"] = result.get("studio_url")
-            heartbeat_active = False  # Stop heartbeat    
+            heartbeat_active = False  # Stop heartbeat
             return response
-        
+
         except Exception as e:
             logger.error(f"Evaluation error: {str(e)}")
             heartbeat_active = False  # Stop heartbeat
             return {"error": str(e)}
-        
+
         finally:
             # Clean up temp file if we created one
             if temp_file and os.path.exists(temp_file):
@@ -626,38 +624,39 @@ def run_text_eval(
                     os.remove(temp_file)
                 except Exception:
                     pass
-                
+
             # Make sure heartbeat is stopped
             heartbeat_active = False
-    
+
     finally:
         # Always restore stdout, even if an exception occurs
         sys.stdout = original_stdout
         heartbeat_active = False
-        
+
+
 @mcp.tool()
 async def agent_query_and_evaluate(
     agent_id: str,
     query: str,
     evaluator_names: List[str] = None,
-    include_studio_url: bool = True  # Option to include studio URL
+    include_studio_url: bool = True,  # Option to include studio URL
 ) -> Dict:
     """
     Query an agent and evaluate its response in a single operation.
-    
+
     Parameters:
     - agent_id: ID of the agent to query
     - query: Text query to send to the agent
     - evaluator_names: Optional list of agent evaluator names to use (defaults to all)
     - include_studio_url: Whether to include the Azure AI studio URL in the response
-    
+
     Returns both the agent response and evaluation results
     """
     # Save original stdout so we can restore it later
     original_stdout = sys.stdout
     # Redirect stdout to stderr to prevent PromptFlow output from breaking MCP
     sys.stdout = sys.stderr
-    
+
     # Heartbeat mechanism to keep connection alive during long operations
     import threading
     import time
@@ -677,12 +676,12 @@ async def agent_query_and_evaluate(
     # Start heartbeat thread
     heartbeat_thread = threading.Thread(target=send_heartbeats, daemon=True)
     heartbeat_thread.start()
-    
+
     try:
         if not agent_initialized or not evaluation_initialized:
             heartbeat_active = False  # Stop heartbeat
             return {"error": "Services not fully initialized. Check environment variables."}
-        
+
         if ai_client is None:
             success = await initialize_agent_client()
             if not success or ai_client is None:
@@ -692,61 +691,61 @@ async def agent_query_and_evaluate(
         try:
             # Query the agent (this part remains async)
             query_response = await query_agent(agent_id, query)
-            
+
             if not query_response.get("success", False):
                 heartbeat_active = False  # Stop heartbeat
                 return query_response
-            
+
             # Get the thread and run IDs
             thread_id = query_response["thread_id"]
             run_id = query_response["run_id"]
-            
+
             # Now we'll switch to synchronous mode, exactly like the GitHub example
-            
+
             # Step 1: Create a synchronous client (this is what GitHub example uses)
             from azure.ai.projects import AIProjectClient  # This is the sync version
             from azure.identity import DefaultAzureCredential
-            
+
             sync_client = AIProjectClient.from_connection_string(
-                credential=DefaultAzureCredential(),
-                conn_str=project_connection_string
+                credential=DefaultAzureCredential(), conn_str=project_connection_string
             )
-            
+
             # Step 2: Create converter with the sync client, exactly like example
             from azure.ai.evaluation import AIAgentConverter
+
             converter = AIAgentConverter(sync_client)
-            
+
             # Step 3: Create a temp file name
             temp_filename = "temp_evaluation_data.jsonl"
-            
+
             try:
                 # Step 4: Convert data synchronously, exactly as in their example
                 evaluation_data = converter.convert(thread_id=thread_id, run_id=run_id)
-                
+
                 # Step 5: Write to file
-                with open(temp_filename, 'w') as f:
+                with open(temp_filename, "w") as f:
                     json.dump(evaluation_data, f)
-                
+
                 # Step 6: Default to all agent evaluators if none specified
                 if not evaluator_names:
                     evaluator_names = list(agent_evaluator_map.keys())
-                
+
                 # Step 7: Create evaluators
                 evaluators = {}
                 for name in evaluator_names:
                     evaluators[name] = create_agent_evaluator(name)
-                
+
                 # Step 8: Run evaluation, exactly as in their example
                 # Use contextlib to ensure all stdout is redirected
                 with contextlib.redirect_stdout(sys.stderr):
                     from azure.ai.evaluation import evaluate
-                    
+
                     evaluation_result = evaluate(
                         data=temp_filename,
                         evaluators=evaluators,
-                        azure_ai_project=azure_ai_project if include_studio_url else None
+                        azure_ai_project=azure_ai_project if include_studio_url else None,
                     )
-                
+
                 # Step 9: Prepare response
                 response = {
                     "success": True,
@@ -756,23 +755,24 @@ async def agent_query_and_evaluate(
                     "query": query,
                     "response": query_response["result"],
                     "citations": query_response.get("citations", []),
-                    "evaluation_metrics": evaluation_result.get("metrics", {})
+                    "evaluation_metrics": evaluation_result.get("metrics", {}),
                 }
-                
+
                 # Include studio URL if available
                 if include_studio_url and "studio_url" in evaluation_result:
                     response["studio_url"] = evaluation_result.get("studio_url")
-                    
+
                 heartbeat_active = False  # Stop heartbeat
                 return response
-                
+
             except Exception as e:
                 logger.error(f"Evaluation error: {str(e)}")
                 import traceback
+
                 logger.error(traceback.format_exc())
                 heartbeat_active = False  # Stop heartbeat
                 return {"error": f"Evaluation error: {str(e)}"}
-                
+
             finally:
                 # Clean up temp file
                 if os.path.exists(temp_filename):
@@ -780,39 +780,40 @@ async def agent_query_and_evaluate(
                         os.remove(temp_filename)
                     except Exception:
                         pass
-                    
+
         except Exception as e:
             logger.error(f"Error in query and evaluate: {str(e)}")
             heartbeat_active = False  # Stop heartbeat
             return {"error": f"Error in query and evaluate: {str(e)}"}
-            
+
     finally:
         # Always restore stdout, even if an exception occurs
         sys.stdout = original_stdout
         heartbeat_active = False  # Stop heartbeat
+
 
 # Add this new helper function to format evaluation outputs
 @mcp.tool()
 def format_evaluation_report(evaluation_result: Dict) -> str:
     """
     Format evaluation results into a readable report with metrics and Studio URL.
-    
+
     Parameters:
     - evaluation_result: The evaluation result dictionary from run_text_eval or agent_query_and_evaluate
-    
+
     Returns a formatted report with metrics and Azure AI Studio URL if available
     """
     if "error" in evaluation_result:
         return f"❌ Evaluation Error: {evaluation_result['error']}"
-    
+
     # Start the report
     report = ["# Evaluation Report\n"]
-    
+
     # Add evaluator info
     evaluator = evaluation_result.get("evaluator")
     if evaluator:
         report.append(f"## Evaluator: {evaluator}\n")
-    
+
     # Add metrics
     metrics = evaluation_result.get("metrics", {})
     if metrics:
@@ -823,18 +824,19 @@ def format_evaluation_report(evaluation_result: Dict) -> str:
                 formatted_value = f"{metric_value:.4f}" if isinstance(metric_value, float) else str(metric_value)
             else:
                 formatted_value = str(metric_value)
-                
+
             report.append(f"- **{metric_name}**: {formatted_value}")
         report.append("\n")
-    
+
     # Add studio URL if available
     studio_url = evaluation_result.get("studio_url")
     if studio_url:
-        report.append(f"## Azure AI Studio\n")
+        report.append("## Azure AI Studio\n")
         report.append(f"📊 [View detailed evaluation results in Azure AI Studio]({studio_url})\n")
-    
+
     # Return the formatted report
     return "\n".join(report)
+
 
 @mcp.tool()
 def run_agent_eval(
@@ -842,11 +844,11 @@ def run_agent_eval(
     query: str,
     response: Optional[str] = None,
     tool_calls: Optional[str] = None,
-    tool_definitions: Optional[str] = None
+    tool_definitions: Optional[str] = None,
 ) -> Dict:
     """
     Run agent evaluation on agent data. Accepts both plain text and JSON strings.
-    
+
     Parameters:
     - evaluator_name: Name of the agent evaluator to use (intent_resolution, tool_call_accuracy, task_adherence)
     - query: User query (plain text or JSON string)
@@ -856,16 +858,16 @@ def run_agent_eval(
     """
     if not evaluation_initialized:
         return {"error": "Evaluation not initialized. Check environment variables."}
-        
+
     if evaluator_name not in agent_evaluator_map:
         raise ValueError(f"Unknown agent evaluator: {evaluator_name}")
-    
+
     try:
         # Helper function to process inputs
         def process_input(input_str):
             if not input_str:
                 return None
-                
+
             # Check if it's already a valid JSON string
             try:
                 # Try to parse as JSON
@@ -873,23 +875,23 @@ def run_agent_eval(
             except json.JSONDecodeError:
                 # If not a JSON string, treat as plain text
                 return input_str
-        
+
         # Process inputs - handle both direct text and JSON strings
         query_data = process_input(query)
         response_data = process_input(response) if response else None
         tool_calls_data = process_input(tool_calls) if tool_calls else None
         tool_definitions_data = process_input(tool_definitions) if tool_definitions else None
-        
+
         # If query/response are plain text, wrap them in the expected format
         if isinstance(query_data, str):
             query_data = {"content": query_data}
-            
+
         if isinstance(response_data, str):
             response_data = {"content": response_data}
-        
+
         # Create evaluator instance
         evaluator = create_agent_evaluator(evaluator_name)
-        
+
         # Prepare kwargs for the evaluator
         kwargs = {"query": query_data}
         if response_data:
@@ -898,29 +900,28 @@ def run_agent_eval(
             kwargs["tool_calls"] = tool_calls_data
         if tool_definitions_data:
             kwargs["tool_definitions"] = tool_definitions_data
-        
+
         # Run evaluation
         result = evaluator(**kwargs)
-        
-        return {
-            "evaluator": evaluator_name,
-            "result": result
-        }
-    
+
+        return {"evaluator": evaluator_name, "result": result}
+
     except Exception as e:
         logger.error(f"Agent evaluation error: {str(e)}")
         return {"error": str(e)}
 
+
 ########################
 # AGENT SERVICE TOOLS  #
 ########################
+
 
 @mcp.tool()
 async def list_agents() -> str:
     """List available agents in the Azure AI Agent Service."""
     if not agent_initialized:
         return "Error: Azure AI Agent service is not initialized. Check environment variables."
-    
+
     if ai_client is None:
         await initialize_agent_client()
         if ai_client is None:
@@ -943,20 +944,21 @@ async def list_agents() -> str:
         logger.error(f"Error listing agents: {str(e)}")
         return f"Error listing agents: {str(e)}"
 
+
 @mcp.tool()
 async def connect_agent(agent_id: str, query: str) -> Dict:
     """
     Connect to a specific Azure AI Agent and run a query.
-    
+
     Parameters:
     - agent_id: ID of the agent to connect to
     - query: Text query to send to the agent
-    
+
     Returns a dict with the agent's response and thread/run IDs for potential evaluation
     """
     if not agent_initialized:
         return {"error": "Azure AI Agent service is not initialized. Check environment variables."}
-    
+
     if ai_client is None:
         await initialize_agent_client()
         if ai_client is None:
@@ -969,22 +971,25 @@ async def connect_agent(agent_id: str, query: str) -> Dict:
         logger.error(f"Error connecting to agent: {str(e)}")
         return {"error": f"Error connecting to agent: {str(e)}"}
 
+
 @mcp.tool()
 async def query_default_agent(query: str) -> Dict:
     """
     Send a query to the default configured Azure AI Agent.
-    
+
     Parameters:
     - query: Text query to send to the default agent
-    
+
     Returns a dict with the agent's response and thread/run IDs for potential evaluation
     """
     if not agent_initialized:
         return {"error": "Azure AI Agent service is not initialized. Check environment variables."}
-    
+
     if not default_agent_id:
-        return {"error": "No default agent configured. Set DEFAULT_AGENT_ID environment variable or use connect_agent tool."}
-    
+        return {
+            "error": "No default agent configured. Set DEFAULT_AGENT_ID environment variable or use connect_agent tool."
+        }
+
     if ai_client is None:
         await initialize_agent_client()
         if ai_client is None:
@@ -997,24 +1002,25 @@ async def query_default_agent(query: str) -> Dict:
         logger.error(f"Error querying default agent: {str(e)}")
         return {"error": f"Error querying default agent: {str(e)}"}
 
+
 if __name__ == "__main__":
     # Initialize agent client in the back
     if agent_initialized:
         asyncio.get_event_loop().run_until_complete(initialize_agent_client())
-    
+
     # Log initialization status
     status = []
     if evaluation_initialized:
         status.append("evaluation")
     if agent_initialized and ai_client is not None:
         status.append("agent service")
-        
+
     if status:
         logger.info(f"Azure AI Foundry MCP Server initialized with: {', '.join(status)}")
         print(f"Azure AI Foundry MCP Server initialized with: {', '.join(status)}", file=sys.stderr)
     else:
         logger.warning("Azure AI Foundry MCP Server initialized with limited functionality")
         print("Azure AI Foundry MCP Server initialized with limited functionality", file=sys.stderr)
-    
+
     # Run with stdio transport
     mcp.run()
