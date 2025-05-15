@@ -217,15 +217,19 @@ def  get_code_sample_for_deployment_under_ai_services(model_name:str, inference_
         )
 
     if not template_response.ok:
+        logger.error(f"Error fetching template: {template_response.status_code}")
         return None
 
     ejs_template = template_response.text
-
-    model_template_config = (
-        requests.get(
-            f"https://ai.azure.com/modelcache/widgets/en/Serverless/azure-openai/{model_name}.json"
-        )
-    ).json()
+    try:
+        model_template_config = (
+            requests.get(
+                f"https://ai.azure.com/modelcache/widgets/en/Serverless/azure-openai/{model_name}.json"
+            )
+        ).json()
+    except Exception as e:
+        logger.error(f"Error fetching model template config: {e}")
+        return None
 
     naive_jinja2_template = re.sub(r"<%=\s+([\w\.]+)\s%>", r"{{ \1|e }}", ejs_template)
 

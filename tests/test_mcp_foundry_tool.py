@@ -26,6 +26,14 @@ async def test_get_model_details_from_model_catalog_gh_model():
     assert isinstance(models, ModelDetails)
     assert models.type == DeploymentOption.FREE_PLAYGROUND
 
+    
+@pytest.mark.asyncio
+async def test_get_model_details_from_model_catalog_gh_model_2():
+    mock_ctx = _mock_ctx()
+    models = await get_model_details_and_code_samples('Phi-4-reasoning',mock_ctx)
+    assert isinstance(models, ModelDetails)
+    assert models.type == DeploymentOption.FREE_PLAYGROUND
+
 @pytest.mark.asyncio
 async def test_get_model_details_from_model_catalog_labs_model():
     mock_ctx = _mock_ctx()
