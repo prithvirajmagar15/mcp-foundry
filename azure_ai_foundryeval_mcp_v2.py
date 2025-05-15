@@ -1,58 +1,58 @@
-import os
-import sys
+import asyncio
+import contextlib
 import json
 import logging
-import asyncio
-import tempfile
-from typing import List, Dict, Any, Optional, Union
-from dotenv import load_dotenv
-from datetime import datetime
-import subprocess
-import httpx
-from jinja2.sandbox import SandboxedEnvironment
+import os
 import re
-import contextlib
+import subprocess
+import sys
+import tempfile
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Union
+
+import httpx
+
+# Azure AI Evaluation Imports
+from azure.ai.evaluation import (
+    # Agent Converter
+    AIAgentConverter,
+    BleuScoreEvaluator,
+    CodeVulnerabilityEvaluator,
+    CoherenceEvaluator,
+    ContentSafetyEvaluator,
+    F1ScoreEvaluator,
+    FluencyEvaluator,
+    # Text Evaluators
+    GroundednessEvaluator,
+    HateUnfairnessEvaluator,
+    IndirectAttackEvaluator,
+    # Agent Evaluators
+    IntentResolutionEvaluator,
+    MeteorScoreEvaluator,
+    ProtectedMaterialEvaluator,
+    QAEvaluator,
+    RelevanceEvaluator,
+    RetrievalEvaluator,
+    RougeScoreEvaluator,
+    SelfHarmEvaluator,
+    SexualEvaluator,
+    SimilarityEvaluator,
+    TaskAdherenceEvaluator,
+    ToolCallAccuracyEvaluator,
+    UngroundedAttributesEvaluator,
+    ViolenceEvaluator,
+    evaluate,
+)
+from azure.ai.projects.aio import AIProjectClient
+from azure.ai.projects.models import Agent, ConnectionType, MessageRole
 
 # Azure Imports
 from azure.identity import DefaultAzureCredential
 from azure.identity.aio import DefaultAzureCredential as AsyncDefaultAzureCredential
-from azure.ai.projects.aio import AIProjectClient
-from azure.ai.projects.models import MessageRole, Agent, ConnectionType
 from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
-
-# Azure AI Evaluation Imports
-from azure.ai.evaluation import (
-    # Text Evaluators
-    GroundednessEvaluator,
-    RelevanceEvaluator,
-    CoherenceEvaluator,
-    FluencyEvaluator,
-    SimilarityEvaluator,
-    RetrievalEvaluator,
-    F1ScoreEvaluator,
-    RougeScoreEvaluator,
-    BleuScoreEvaluator,
-    MeteorScoreEvaluator,
-    ViolenceEvaluator,
-    SexualEvaluator,
-    SelfHarmEvaluator,
-    HateUnfairnessEvaluator,
-    IndirectAttackEvaluator,
-    ProtectedMaterialEvaluator,
-    UngroundedAttributesEvaluator,
-    CodeVulnerabilityEvaluator,
-    QAEvaluator,
-    ContentSafetyEvaluator,
-    evaluate,
-    # Agent Evaluators
-    IntentResolutionEvaluator,
-    ToolCallAccuracyEvaluator,
-    TaskAdherenceEvaluator,
-    # Agent Converter
-    AIAgentConverter
-)
-
-from mcp.server.fastmcp import FastMCP, Context
+from dotenv import load_dotenv
+from jinja2.sandbox import SandboxedEnvironment
+from mcp.server.fastmcp import Context, FastMCP
 
 # Configure logging
 logging.basicConfig(
@@ -710,8 +710,8 @@ async def agent_query_and_evaluate(
             # Now we'll switch to synchronous mode, exactly like the GitHub example
             
             # Step 1: Create a synchronous client (this is what GitHub example uses)
-            from azure.identity import DefaultAzureCredential
             from azure.ai.projects import AIProjectClient  # This is the sync version
+            from azure.identity import DefaultAzureCredential
             
             sync_client = AIProjectClient.from_connection_string(
                 credential=DefaultAzureCredential(),
