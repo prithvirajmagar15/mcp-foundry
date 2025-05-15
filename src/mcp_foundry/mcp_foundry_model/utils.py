@@ -9,7 +9,22 @@ from pathlib import Path
 from typing import Optional
 
 import dotenv
+import json
+import logging
+import os
+import re
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+from typing import Optional
+
+import dotenv
 import requests
+from azure.identity import DefaultAzureCredential
+from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
+from jinja2.sandbox import SandboxedEnvironment
+from markupsafe import Markup
 from azure.identity import DefaultAzureCredential
 from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
 from jinja2.sandbox import SandboxedEnvironment
