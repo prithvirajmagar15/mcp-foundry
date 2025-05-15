@@ -39,7 +39,7 @@ Edit `mcp.json` to configure server options and tool settings.
 
 ### Quick Start
 
-[![Install in VS Code](https://img.shields.io/static/v1?style=for-the-badge&label=Install+in+VS+Code&message=Open&color=007ACC&logo=visualstudiocode)](https://insiders.vscode.dev/redirect/mcp/install?name=Azure%20Foundry%20MCP%20Server&config=%7B%22command%22%3A%22pipx%22%2C%22args%22%3A%5B%22run%22%2C%22--no-cache%22%2C%22--spec%22%2C%22git%2Bhttps%3A%2F%2Fgithub.com%2Fazure-ai-foundry%2Fmcp-foundry.git%22%2C%22run-azure-foundry-mcp%22%5D%7D)
+[![Install in VS Code](https://img.shields.io/static/v1?style=for-the-badge&label=Install+in+VS+Code&message=Open&color=007ACC&logo=visualstudiocode)](https://insiders.vscode.dev/redirect/mcp/install?name=Azure%20Foundry%20MCP%20Server&config=%7B%22command%22%3A%22pipx%22%2C%22args%22%3A%5B%22run%22%2C%22--no-cache%22%2C%22--spec%22%2C%22git%2Bhttps%3A%2F%2Fgithub.com%2Fazure-ai-foundry%2Fmcp-foundry.git%22%2C%22run-azure-ai-foundry-mcp%22%5D%7D)
 [![Use The Template](https://img.shields.io/static/v1?style=for-the-badge&label=Use+The+Template&message=GitHub&color=181717&logo=github)](https://github.com/azure-ai-foundry/foundry-models-playground/generate)
 
 
@@ -83,7 +83,7 @@ Copy and paste the following JSON block into your MCP client’s configuration:
     "--no-cache"
     "--spec",
     "git+https://github.com/azure-ai-foundry/mcp-foundry.git",
-    "run-azure-foundry-mcp"
+    "run-azure-ai-foundry-mcp"
   ]
 }
 ```
