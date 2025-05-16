@@ -114,6 +114,16 @@ python -m pipx ensurepath
 
 ---
 
+If you are more comfortable with `uv` and `uvx`, you can use these commands to install these tools as well
+
+```bash
+# Installs uv
+pipx install uv
+
+# Installs uvx
+pipx install uvx 
+
+```
 #### 2. Configure Your MCP Client
 
 Open the **MCP settings** in your client of choice.  
