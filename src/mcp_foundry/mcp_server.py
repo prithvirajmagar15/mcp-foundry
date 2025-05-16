@@ -28,5 +28,3 @@ def auto_import_modules(base_package: str, targets: list[str]):
             except Exception as e:
                 print(f"❌ Error importing {module_name}: {e}")
 
-# Run this on startup
-auto_import_modules("mcp_foundry", targets=["tools", "resources", "prompts"])

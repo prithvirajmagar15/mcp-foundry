@@ -33,9 +33,7 @@ A Model Context Protocol server for Azure AI Foundry, providing a unified set of
 - **fk_fetch_local_file_contents** - Retrieves the contents of a local file path (sample JSON, document etc)  
 - **fk_fetch_url_contents** - Retrieves the contents of a URL (sample JSON, document etc)
 
-##### Configuration of Environment Variables in MCP Host
-
-You will need to create an .env file in the directory you have cloned the repo to
+##### Required Environment Variables
 
 If you are authenticating with a managed identity you will need to pass in the environment variables in your MCP host configuration. You can also use the AI Search API Key to Authenticate.
 
@@ -79,15 +77,66 @@ You can also filter the list of tools returned to your MCP host by specifying a 
 - Tool 2: [placeholder]
 
 ### Foundry-Observability
+
 #### Tools
-- Tool 1: [placeholder]
-- Tool 2: [placeholder]
+
+**Evaluator Utilities**
+
+- **list_text_evaluators** - List all available text evaluators.
+- **list_agent_evaluators** - List all available agent evaluators.
+- **get_text_evaluator_requirements** - Show input requirements for each text evaluator.
+- **get_agent_evaluator_requirements** - Show input requirements for each agent evaluator.
+
+**Text Evaluation**
+
+- **run_text_eval** - Run one or multiple text evaluators on a JSONL file or content.
+- **format_evaluation_report** - Convert evaluation output into a readable Markdown report.
+
+**Agent Evaluation**
+
+- **agent_query_and_evaluate** - Query an agent and evaluate its response using selected evaluators. End-to-End agent evaluation.
+- **run_agent_eval** - Evaluate a single agent interaction with specific data (query, response, tool calls, definitions).
+
+**Agent Service**
+
+- **list_agents** - List all Azure AI Agents available in the configured project.
+- **connect_agent** - Send a query to a specified agent.
+- **query_default_agent** - Query the default agent defined in environment variables.
+
+#### Required Evaluation Environment Variables
+
+See details on configuration in the [Environment Variables](#environment-variables) section.
+
+Required Environment Variables
+
+| **Variable**                | **Required When**               | **Description**                                 |
+| --------------------------- | ------------------------------- | ----------------------------------------------- |
+| `EVAL_DATA_DIR`             | Always                          | Path to the JSONL evaluation dataset            |
+| `AZURE_SUBSCRIPTION_ID`     | Agent eval or risk/safety evals | Azure subscription ID                           |
+| `AZURE_RESOURCE_GROUP`      | Agent eval or risk/safety evals | Resource group of your Azure AI project         |
+| `AZURE_PROJECT_NAME`        | Agent eval or risk/safety evals | Azure AI project name                           |
+| `AZURE_OPENAI_ENDPOINT`     | Text quality evaluators         | Endpoint for Azure OpenAI                       |
+| `AZURE_OPENAI_API_KEY`      | Text quality evaluators         | API key for Azure OpenAI                        |
+| `AZURE_OPENAI_DEPLOYMENT`   | Text quality evaluators         | Deployment name (e.g., `gpt-4o`)                |
+| `AZURE_OPENAI_API_VERSION`  | Text quality evaluators         | Version of the OpenAI API                       |
+| `PROJECT_CONNECTION_STRING` | Agent services                  | Used for Azure AI Agent querying and evaluation |
+
+
+##### Notes
+
+* If you're using **agent tools or safety evaluators**, make sure the Azure project credentials are valid.
+* If you're only doing **text quality evaluation**, the OpenAI endpoint and key are sufficient.
+* These variables are automatically read by the MCP when the config file is correctly set up.
 
 ---
 
 ## Configuration
 
 Edit `mcp.json` to configure server options and tool settings.
+
+### Environment Variables
+
+You will need to create an .env file in the directory you have cloned the repo to.
 
 ## Deployment
 
