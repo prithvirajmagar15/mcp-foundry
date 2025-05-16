@@ -33,9 +33,7 @@ A Model Context Protocol server for Azure AI Foundry, providing a unified set of
 - **fk_fetch_local_file_contents** - Retrieves the contents of a local file path (sample JSON, document etc)  
 - **fk_fetch_url_contents** - Retrieves the contents of a URL (sample JSON, document etc)
 
-##### Configuration of Environment Variables in MCP Host
-
-You will need to create an .env file in the directory you have cloned the repo to
+##### Required Environment Variables
 
 If you are authenticating with a managed identity you will need to pass in the environment variables in your MCP host configuration. You can also use the AI Search API Key to Authenticate.
 
@@ -105,41 +103,9 @@ You can also filter the list of tools returned to your MCP host by specifying a 
 - **connect_agent** - Send a query to a specified agent.
 - **query_default_agent** - Query the default agent defined in environment variables.
 
-#### Configuration of Environment Variables in MCP Host
+#### Required Evaluation Environment Variables
 
-In your setup, environment variables are defined directly in the **Claude config file** under the `env` block of the `mcpServers` section. You need to download Claude Desktop app for using MCP server
-
-<details>
-<summary>Click to expand JSON config</summary>
-
-```json
-{
-  "mcpServers": {
-    "azure-ai-foundry": {
-      "command": "C:\\Users\\<user_name>\\.venv\\Scripts\\python.exe",
-      "args": [
-        "path/to/<filename>.py"
-      ],
-      "env": {
-        "EVAL_DATA_DIR": "path/to/eval/",
-        "AZURE_SUBSCRIPTION_ID": "",
-        "AZURE_RESOURCE_GROUP": "",
-        "AZURE_PROJECT_NAME": "",
-        "AZURE_OPENAI_ENDPOINT": "",
-        "AZURE_OPENAI_API_KEY": "",
-        "AZURE_OPENAI_DEPLOYMENT": "",
-        "AZURE_OPENAI_API_VERSION": "",
-        "PROJECT_CONNECTION_STRING": ""
-      }
-    }
-  }
-}
-```
-
-</details>
-
-> 💡 You do **not** need to use a `.env` file when environment variables are configured this way.
-
+See details on configuration in the [Environment Variables](#environment-variables) section.
 
 Required Environment Variables
 
@@ -167,6 +133,10 @@ Required Environment Variables
 ## Configuration
 
 Edit `mcp.json` to configure server options and tool settings.
+
+### Environment Variables
+
+You will need to create an .env file in the directory you have cloned the repo to.
 
 ## Deployment
 
