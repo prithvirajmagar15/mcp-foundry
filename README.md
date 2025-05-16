@@ -12,8 +12,26 @@ A Model Context Protocol server for Azure AI Foundry, providing a unified set of
 
 ### Foundry-Knowledge
 #### Tools
-- Tool 1: [placeholder]
-- Tool 2: [placeholder]
+- **list_index_names** - Retrieve all names of indexes from the AI Search Service  
+- **list_index_schemas** - Retrieve all index schemas from the AI Search Service  
+- **retrieve_index_schema** - Retrieve the schema for a specific index from the AI Search Service  
+- **create_index** - Creates a new index  
+- **modify_index** - Modifies the index definition of an existing index  
+- **delete_index** - Removes an existing index  
+- **add_document** - Adds a document to the index  
+- **delete_document** - Removes a document from the index  
+- **query_index** - Searches a specific index to retrieve matching documents  
+- **get_document_count** - Returns the total number of documents in the index  
+- **list_indexers** - Retrieve all names of indexers from the AI Search Service  
+- **get_indexer** - Retrieve the full definition of a specific indexer from the AI Search Service  
+- **create_indexer** - Create a new indexer in the Search Service with the skill, index and data source  
+- **delete_indexer** - Delete an indexer from the AI Search Service by name  
+- **list_data_sources** - Retrieve all names of data sources from the AI Search Service  
+- **get_data_source** - Retrieve the full definition of a specific data source  
+- **list_skill_sets** - Retrieve all names of skill sets from the AI Search Service  
+- **get_skill_set** - Retrieve the full definition of a specific skill set  
+- **fk_fetch_local_file_contents** - Retrieves the contents of a local file path (sample JSON, document etc)  
+- **fk_fetch_url_contents** - Retrieves the contents of a URL (sample JSON, document etc)
 
 ### Foundry-Models
 #### Tools
@@ -77,19 +95,47 @@ Follow the appropriate link below for detailed instructions:
 Copy and paste the following JSON block into your MCP client’s configuration:
 
 ```json
-"MCP Server For Azure AI Foundry": {
-  "command": "pipx",
-  "args": [
-    "run",
-    "--no-cache"
-    "--spec",
-    "git+https://github.com/azure-ai-foundry/mcp-foundry.git@msbuild2025",
-    "run-azure-ai-foundry-mcp"
-  ]
+{
+  "MCP Server For Azure AI Foundry": {
+    "command": "pipx",
+    "args": [
+      "run",
+      "--no-cache",
+      "--spec",
+      "git+https://github.com/azure-ai-foundry/mcp-foundry.git@msbuild2025",
+      "run-azure-ai-foundry-mcp"
+    ]
+  }
 }
 ```
 
 > This will automatically install and run the MCP server using `pipx`.
+
+If you are using uvx with environment file in a specific directory, use this in your MCP client configuration
+
+This assumes your environment file is in the folder `/User/username/mcp-foundry`
+
+```json
+{
+  "MCP Server For Azure AI Foundry": {
+    "command": "uvx",
+    "args": [
+      "run",
+      "--no-cache",
+      "--directory",
+      "/User/username/mcp-foundry",
+      "--from",
+      "git+https://github.com/azure-ai-foundry/mcp-foundry.git@msbuild2025",
+      "run-azure-ai-foundry-mcp",
+      "--envFile",
+      ".env"
+    ]
+  }
+}
+```
+
+> This will automatically install and run the MCP server using `uvx`.
+
 
 ---
 
