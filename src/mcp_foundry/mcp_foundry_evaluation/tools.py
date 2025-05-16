@@ -1001,26 +1001,3 @@ async def query_default_agent(query: str) -> Dict:
     except Exception as e:
         logger.error(f"Error querying default agent: {str(e)}")
         return {"error": f"Error querying default agent: {str(e)}"}
-
-
-if __name__ == "__main__":
-    # Initialize agent client in the back
-    if AGENT_INITIALIZED:
-        asyncio.get_event_loop().run_until_complete(initialize_agent_client())
-
-    # Log initialization status
-    status = []
-    if EVALUATION_INITIALIZED:
-        status.append("evaluation")
-    if AGENT_INITIALIZED and AI_CLIENT is not None:
-        status.append("agent service")
-
-    if status:
-        logger.info(f"Azure AI Foundry MCP Server initialized with: {', '.join(status)}")
-        print(f"Azure AI Foundry MCP Server initialized with: {', '.join(status)}", file=sys.stderr)
-    else:
-        logger.warning("Azure AI Foundry MCP Server initialized with limited functionality")
-        print("Azure AI Foundry MCP Server initialized with limited functionality", file=sys.stderr)
-
-    # Run with stdio transport
-    mcp.run()
