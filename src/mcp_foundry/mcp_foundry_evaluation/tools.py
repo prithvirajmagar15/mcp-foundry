@@ -46,7 +46,8 @@ from azure.ai.projects.models import Agent, MessageRole
 from azure.identity import DefaultAzureCredential
 from azure.identity.aio import DefaultAzureCredential as AsyncDefaultAzureCredential
 from dotenv import load_dotenv
-from mcp.server.fastmcp import FastMCP
+
+from mcp_foundry.mcp_server import mcp
 
 # Configure logging
 logging.basicConfig(
@@ -77,13 +78,6 @@ configure_promptflow_logging()
 
 # Load environment variables
 load_dotenv()
-
-# Initialize MCP server
-mcp = FastMCP(
-    "azure-ai-foundry",
-    description="MCP server for Azure AI Foundry Evaluation and Agent Service",
-    dependencies=["azure-identity", "python-dotenv", "azure-ai-projects", "azure-ai-evaluation"],
-)
 
 #######################
 # CONFIGURATION SETUP #
