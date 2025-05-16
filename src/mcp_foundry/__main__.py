@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 from typing import Literal
 from dotenv import load_dotenv
 
-from .mcp_server import mcp
+from .mcp_server import mcp, auto_import_modules
 
 # Configure logger
 logger = logging.getLogger("mcp_foundry")
@@ -37,6 +37,8 @@ def main() -> None:
     else:
         print(f"Environment file '{mcp_env_file}' not found. Skipping environment loading.")
 
+    # Run this on startup
+    auto_import_modules("mcp_foundry", targets=["tools", "resources", "prompts"])
     mcp.run(transport=specified_transport)
 
 
