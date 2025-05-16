@@ -92,6 +92,8 @@ Follow the appropriate link below for detailed instructions:
 
 #### 3. Add MCP Entry
 
+##### Running with pipx
+
 Copy and paste the following JSON block into your MCP client’s configuration:
 
 ```json
@@ -110,6 +112,8 @@ Copy and paste the following JSON block into your MCP client’s configuration:
 ```
 
 > This will automatically install and run the MCP server using `pipx`.
+
+##### Running with uvx
 
 If you are using uvx with environment file in a specific directory, use this in your MCP client configuration
 
@@ -136,6 +140,36 @@ This assumes your environment file is in the folder `/User/username/mcp-foundry`
 
 > This will automatically install and run the MCP server using `uvx`.
 
+
+#### Running with uv
+
+````bash
+git clone https://github.com/azure-ai-foundry/mcp-foundry.git -b msbuild2025
+
+cd mcp-foundry
+
+uv pip install -e . 
+
+````
+
+This assumes your environment file is in the folder `/User/username/mcp-foundry`
+
+```json
+{
+  "MCP Server For Azure AI Foundry": {
+    "command": "uv",
+    "args": [
+      "run",
+      "--directory",
+      "/User/username/mcp-foundry",
+      "-m",
+      "mcp_foundry",
+      "--envFile",
+      ".env"
+    ]
+  }
+}
+```
 
 ---
 
