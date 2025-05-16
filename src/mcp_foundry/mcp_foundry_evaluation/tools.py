@@ -92,17 +92,17 @@ mcp = FastMCP(
 # Initialize Azure AI project and Azure OpenAI connection with environment variables
 try:
     # Sync credential for evaluations
-    credential = DefaultAzureCredential()
+    CREDENTIAL = DefaultAzureCredential()
 
     # Credentials for Azure AI project
-    azure_ai_project = {
+    AZURE_AI_PROJECT = {
         "subscription_id": os.environ.get("AZURE_SUBSCRIPTION_ID"),
         "resource_group_name": os.environ.get("AZURE_RESOURCE_GROUP"),
         "project_name": os.environ.get("AZURE_PROJECT_NAME"),
     }
 
     # Azure OpenAI model configuration
-    model_config = {
+    MODEL_CONFIG = {
         "azure_endpoint": os.environ.get("AZURE_OPENAI_ENDPOINT"),
         "api_key": os.environ.get("AZURE_OPENAI_API_KEY"),
         "azure_deployment": os.environ.get("AZURE_OPENAI_DEPLOYMENT"),
@@ -110,47 +110,47 @@ try:
     }
 
     # Directory for evaluation data files
-    eval_data_dir = os.environ.get("EVAL_DATA_DIR", ".")
+    EVAL_DATA_DIR = os.environ.get("EVAL_DATA_DIR", ".")
 
     # Azure AI Agent configuration
-    project_connection_string = os.environ.get("PROJECT_CONNECTION_STRING")
-    default_agent_id = os.environ.get("DEFAULT_AGENT_ID")
+    PROJECT_CONNECTION_STRING = os.environ.get("PROJECT_CONNECTION_STRING")
+    DEFAULT_AGENT_ID = os.environ.get("DEFAULT_AGENT_ID")
 
     # Initialization flags
-    evaluation_initialized = True
-    if not all([azure_ai_project["subscription_id"], model_config["azure_endpoint"]]):
-        evaluation_initialized = False
+    EVALUATION_INITIALIZED = True
+    if not all([AZURE_AI_PROJECT["subscription_id"], MODEL_CONFIG["azure_endpoint"]]):
+        EVALUATION_INITIALIZED = False
         logger.warning("Some evaluation credentials are missing, some evaluators may not work")
 
-    agent_initialized = bool(project_connection_string)
-    if not agent_initialized:
+    AGENT_INITIALIZED = bool(PROJECT_CONNECTION_STRING)
+    if not AGENT_INITIALIZED:
         logger.warning("PROJECT_CONNECTION_STRING is missing, agent features will not work")
 
 except Exception as e:
     logger.error(f"Initialization error: {str(e)}")
-    credential = None
-    azure_ai_project = None
-    model_config = None
-    evaluation_initialized = False
-    agent_initialized = False
+    CREDENTIAL = None
+    AZURE_AI_PROJECT = None
+    MODEL_CONFIG = None
+    EVALUATION_INITIALIZED = False
+    AGENT_INITIALIZED = False
 
 # Global variables for agent client and cache
-ai_client: Optional[AIProjectClient] = None
-agent_cache = {}
+AI_CLIENT: Optional[AIProjectClient] = None
+AGENT_CACHE = {}
 
 
 async def initialize_agent_client():
     """Initialize the Azure AI Agent client asynchronously."""
-    global ai_client
+    global AI_CLIENT
 
-    if not agent_initialized:
+    if not AGENT_INITIALIZED:
         return False
 
     try:
         async_credential = AsyncDefaultAzureCredential()
-        ai_client = AIProjectClient.from_connection_string(
+        AI_CLIENT = AIProjectClient.from_connection_string(
             credential=async_credential,
-            conn_str=project_connection_string,
+            conn_str=PROJECT_CONNECTION_STRING,
             user_agent="mcp-azure-ai-foundry",
         )
         return True
@@ -164,7 +164,7 @@ async def initialize_agent_client():
 #######################
 
 # Map evaluator names to classes for dynamic instantiation
-text_evaluator_map = {
+TEXT_EVALUATOR_MAP = {
     "groundedness": GroundednessEvaluator,
     "relevance": RelevanceEvaluator,
     "coherence": CoherenceEvaluator,
@@ -188,14 +188,14 @@ text_evaluator_map = {
 }
 
 # Map agent evaluator names to classes
-agent_evaluator_map = {
+AGENT_EVALUATOR_MAP = {
     "intent_resolution": IntentResolutionEvaluator,
     "tool_call_accuracy": ToolCallAccuracyEvaluator,
     "task_adherence": TaskAdherenceEvaluator,
 }
 
 # Required parameters for each text evaluator
-text_evaluator_requirements = {
+TEXT_EVALUATOR_REQUIREMENTS = {
     "groundedness": {"query": "Optional", "response": "Required", "context": "Required"},
     "relevance": {"query": "Required", "response": "Required"},
     "coherence": {"query": "Required", "response": "Required"},
@@ -245,16 +245,16 @@ agent_evaluator_requirements = {
 
 def create_text_evaluator(evaluator_name: str) -> Any:
     """Create and configure an appropriate text evaluator instance."""
-    if evaluator_name not in text_evaluator_map:
+    if evaluator_name not in TEXT_EVALUATOR_MAP:
         raise ValueError(f"Unknown text evaluator: {evaluator_name}")
 
-    EvaluatorClass = text_evaluator_map[evaluator_name]
+    EvaluatorClass = TEXT_EVALUATOR_MAP[evaluator_name]
 
     # AI-assisted quality evaluators need a model
     if evaluator_name in ["groundedness", "relevance", "coherence", "fluency", "similarity"]:
-        if not model_config or not all([model_config["azure_endpoint"], model_config["api_key"]]):
+        if not MODEL_CONFIG or not all([MODEL_CONFIG["azure_endpoint"], MODEL_CONFIG["api_key"]]):
             raise ValueError(f"Model configuration required for {evaluator_name} evaluator")
-        return EvaluatorClass(model_config)
+        return EvaluatorClass(MODEL_CONFIG)
 
     # AI-assisted risk and safety evaluators need Azure credentials
     elif evaluator_name in [
@@ -268,9 +268,9 @@ def create_text_evaluator(evaluator_name: str) -> Any:
         "code_vulnerability",
         "content_safety",
     ]:
-        if credential is None or azure_ai_project is None:
+        if CREDENTIAL is None or AZURE_AI_PROJECT is None:
             raise ValueError(f"Azure credentials required for {evaluator_name} evaluator")
-        return EvaluatorClass(credential=credential, azure_ai_project=azure_ai_project)
+        return EvaluatorClass(credential=CREDENTIAL, azure_ai_project=AZURE_AI_PROJECT)
 
     # NLP evaluators don't need special configuration
     else:
@@ -282,25 +282,25 @@ def create_agent_evaluator(evaluator_name: str) -> Any:
     if evaluator_name not in AGENT_EVALUATOR_MAP:
         raise ValueError(f"Unknown agent evaluator: {evaluator_name}")
 
-    if not model_config or not all([model_config["azure_endpoint"], model_config["api_key"]]):
+    if not MODEL_CONFIG or not all([MODEL_CONFIG["azure_endpoint"], MODEL_CONFIG["api_key"]]):
         raise ValueError(f"Model configuration required for {evaluator_name} evaluator")
 
     EvaluatorClass = AGENT_EVALUATOR_MAP[evaluator_name]
-    return EvaluatorClass(model_config=model_config)
+    return EvaluatorClass(model_config=MODEL_CONFIG)
 
 
 async def get_agent(client: AIProjectClient, agent_id: str) -> Agent:
     """Get an agent by ID with simple caching."""
-    global agent_cache
+    global AGENT_CACHE
 
     # Check cache first
-    if agent_id in agent_cache:
-        return agent_cache[agent_id]
+    if agent_id in AGENT_CACHE:
+        return AGENT_CACHE[agent_id]
 
     # Fetch agent if not in cache
     try:
         agent = await client.agents.get_agent(agent_id=agent_id)
-        agent_cache[agent_id] = agent
+        AGENT_CACHE[agent_id] = agent
         return agent
     except Exception as e:
         logger.error(f"Agent retrieval failed - ID: {agent_id}, Error: {str(e)}")
@@ -428,7 +428,7 @@ def list_text_evaluators() -> List[str]:
     """
     Returns a list of available text evaluator names for evaluating text outputs.
     """
-    return list(text_evaluator_map.keys())
+    return list(TEXT_EVALUATOR_MAP.keys())
 
 
 @mcp.tool()
@@ -436,7 +436,7 @@ def list_agent_evaluators() -> List[str]:
     """
     Returns a list of available agent evaluator names for evaluating agent behaviors.
     """
-    return list(agent_evaluator_map.keys())
+    return list(AGENT_EVALUATOR_MAP.keys())
 
 
 @mcp.tool()
@@ -448,11 +448,11 @@ def get_text_evaluator_requirements(evaluator_name: str = None) -> Dict:
     - evaluator_name: Optional name of evaluator. If None, returns requirements for all evaluators.
     """
     if evaluator_name is not None:
-        if evaluator_name not in text_evaluator_map:
+        if evaluator_name not in TEXT_EVALUATOR_MAP:
             raise ValueError(f"Unknown evaluator {evaluator_name}")
-        return {evaluator_name: text_evaluator_requirements[evaluator_name]}
+        return {evaluator_name: TEXT_EVALUATOR_REQUIREMENTS[evaluator_name]}
     else:
-        return text_evaluator_requirements
+        return TEXT_EVALUATOR_REQUIREMENTS
 
 
 @mcp.tool()
@@ -464,7 +464,7 @@ def get_agent_evaluator_requirements(evaluator_name: str = None) -> Dict:
     - evaluator_name: Optional name of evaluator. If None, returns requirements for all evaluators.
     """
     if evaluator_name is not None:
-        if evaluator_name not in agent_evaluator_map:
+        if evaluator_name not in AGENT_EVALUATOR_MAP:
             raise ValueError(f"Unknown evaluator {evaluator_name}")
         return {evaluator_name: agent_evaluator_requirements[evaluator_name]}
     else:
@@ -515,7 +515,7 @@ def run_text_eval(
     heartbeat_thread.start()
 
     try:
-        if not evaluation_initialized:
+        if not EVALUATION_INITIALIZED:
             heartbeat_active = False  # Stop heartbeat
             return {"error": "Evaluation not initialized. Check environment variables."}
 
@@ -530,7 +530,7 @@ def run_text_eval(
 
         # Validate evaluator names
         for name in evaluator_names:
-            if name not in text_evaluator_map:
+            if name not in TEXT_EVALUATOR_MAP:
                 heartbeat_active = False  # Stop heartbeat
                 return {"error": f"Unknown evaluator: {name}"}
 
@@ -581,7 +581,7 @@ def run_text_eval(
                 evaluators[name] = create_text_evaluator(name)
 
                 # Set up column mapping for this evaluator
-                requirements = text_evaluator_requirements[name]
+                requirements = TEXT_EVALUATOR_REQUIREMENTS[name]
                 column_mapping = {}
                 for field, requirement in requirements.items():
                     if requirement == "Required":
@@ -592,8 +592,8 @@ def run_text_eval(
             eval_args = {"data": input_file, "evaluators": evaluators, "evaluator_config": eval_config}
 
             # Add Azure AI project info if initialized
-            if azure_ai_project and include_studio_url:
-                eval_args["azure_ai_project"] = azure_ai_project
+            if AZURE_AI_PROJECT and include_studio_url:
+                eval_args["azure_ai_project"] = AZURE_AI_PROJECT
 
             # Run evaluation with additional stdout redirection for extra safety
             with contextlib.redirect_stdout(sys.stderr):
@@ -678,19 +678,19 @@ async def agent_query_and_evaluate(
     heartbeat_thread.start()
 
     try:
-        if not agent_initialized or not evaluation_initialized:
+        if not AGENT_INITIALIZED or not EVALUATION_INITIALIZED:
             heartbeat_active = False  # Stop heartbeat
             return {"error": "Services not fully initialized. Check environment variables."}
 
-        if ai_client is None:
+        if AI_CLIENT is None:
             success = await initialize_agent_client()
-            if not success or ai_client is None:
+            if not success or AI_CLIENT is None:
                 heartbeat_active = False  # Stop heartbeat
                 return {"error": "Failed to initialize Azure AI Agent client."}
 
         try:
             # Query the agent (this part remains async)
-            query_response = await query_agent(ai_client, agent_id, query)
+            query_response = await query_agent(AI_CLIENT, agent_id, query)
 
             if not query_response.get("success", False):
                 heartbeat_active = False  # Stop heartbeat
@@ -707,7 +707,7 @@ async def agent_query_and_evaluate(
             from azure.identity import DefaultAzureCredential
 
             sync_client = AIProjectClient.from_connection_string(
-                credential=DefaultAzureCredential(), conn_str=project_connection_string
+                credential=DefaultAzureCredential(), conn_str=PROJECT_CONNECTION_STRING
             )
 
             # Step 2: Create converter with the sync client, exactly like example
@@ -728,7 +728,7 @@ async def agent_query_and_evaluate(
 
                 # Step 6: Default to all agent evaluators if none specified
                 if not evaluator_names:
-                    evaluator_names = list(agent_evaluator_map.keys())
+                    evaluator_names = list(AGENT_EVALUATOR_MAP.keys())
 
                 # Step 7: Create evaluators
                 evaluators = {}
@@ -743,7 +743,7 @@ async def agent_query_and_evaluate(
                     evaluation_result = evaluate(
                         data=temp_filename,
                         evaluators=evaluators,
-                        azure_ai_project=azure_ai_project if include_studio_url else None,
+                        azure_ai_project=AZURE_AI_PROJECT if include_studio_url else None,
                     )
 
                 # Step 9: Prepare response
@@ -856,10 +856,10 @@ def run_agent_eval(
     - tool_calls: Optional tool calls data (JSON string)
     - tool_definitions: Optional tool definitions (JSON string)
     """
-    if not evaluation_initialized:
+    if not EVALUATION_INITIALIZED:
         return {"error": "Evaluation not initialized. Check environment variables."}
 
-    if evaluator_name not in agent_evaluator_map:
+    if evaluator_name not in AGENT_EVALUATOR_MAP:
         raise ValueError(f"Unknown agent evaluator: {evaluator_name}")
 
     try:
@@ -919,16 +919,16 @@ def run_agent_eval(
 @mcp.tool()
 async def list_agents() -> str:
     """List available agents in the Azure AI Agent Service."""
-    if not agent_initialized:
+    if not AGENT_INITIALIZED:
         return "Error: Azure AI Agent service is not initialized. Check environment variables."
 
-    if ai_client is None:
+    if AI_CLIENT is None:
         await initialize_agent_client()
-        if ai_client is None:
+        if AI_CLIENT is None:
             return "Error: Failed to initialize Azure AI Agent client."
 
     try:
-        agents = await ai_client.agents.list_agents()
+        agents = await AI_CLIENT.agents.list_agents()
         if not agents or not agents.data:
             return "No agents found in the Azure AI Agent Service."
 
@@ -936,8 +936,8 @@ async def list_agents() -> str:
         for agent in agents.data:
             result += f"- **{agent.name}**: `{agent.id}`\n"
 
-        if default_agent_id:
-            result += f"\n**Default Agent ID**: `{default_agent_id}`"
+        if DEFAULT_AGENT_ID:
+            result += f"\n**Default Agent ID**: `{DEFAULT_AGENT_ID}`"
 
         return result
     except Exception as e:
@@ -956,16 +956,16 @@ async def connect_agent(agent_id: str, query: str) -> Dict:
 
     Returns a dict with the agent's response and thread/run IDs for potential evaluation
     """
-    if not agent_initialized:
+    if not AGENT_INITIALIZED:
         return {"error": "Azure AI Agent service is not initialized. Check environment variables."}
 
-    if ai_client is None:
+    if AI_CLIENT is None:
         await initialize_agent_client()
-        if ai_client is None:
+        if AI_CLIENT is None:
             return {"error": "Failed to initialize Azure AI Agent client."}
 
     try:
-        response = await query_agent(ai_client, agent_id, query)
+        response = await query_agent(AI_CLIENT, agent_id, query)
         return response
     except Exception as e:
         logger.error(f"Error connecting to agent: {str(e)}")
@@ -982,21 +982,21 @@ async def query_default_agent(query: str) -> Dict:
 
     Returns a dict with the agent's response and thread/run IDs for potential evaluation
     """
-    if not agent_initialized:
+    if not AGENT_INITIALIZED:
         return {"error": "Azure AI Agent service is not initialized. Check environment variables."}
 
-    if not default_agent_id:
+    if not DEFAULT_AGENT_ID:
         return {
             "error": "No default agent configured. Set DEFAULT_AGENT_ID environment variable or use connect_agent tool."
         }
 
-    if ai_client is None:
+    if AI_CLIENT is None:
         await initialize_agent_client()
-        if ai_client is None:
+        if AI_CLIENT is None:
             return {"error": "Failed to initialize Azure AI Agent client."}
 
     try:
-        response = await query_agent(ai_client, default_agent_id, query)
+        response = await query_agent(AI_CLIENT, DEFAULT_AGENT_ID, query)
         return response
     except Exception as e:
         logger.error(f"Error querying default agent: {str(e)}")
@@ -1005,14 +1005,14 @@ async def query_default_agent(query: str) -> Dict:
 
 if __name__ == "__main__":
     # Initialize agent client in the back
-    if agent_initialized:
+    if AGENT_INITIALIZED:
         asyncio.get_event_loop().run_until_complete(initialize_agent_client())
 
     # Log initialization status
     status = []
-    if evaluation_initialized:
+    if EVALUATION_INITIALIZED:
         status.append("evaluation")
-    if agent_initialized and ai_client is not None:
+    if AGENT_INITIALIZED and AI_CLIENT is not None:
         status.append("agent service")
 
     if status:
