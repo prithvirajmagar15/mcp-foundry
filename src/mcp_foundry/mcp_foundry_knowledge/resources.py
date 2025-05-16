@@ -6,7 +6,8 @@ from mcp_foundry.mcp_server import mcp
 async def sample_python_mcp_client_resource() -> str:
     return """
     ## MCP Client Written with Pydantic AI
+    
     This is an MCP client written with Pydantic AI that is intended to be used for checking out all the capabilities of the MCP service
 
-    https://github.com/projectAcetylcholine/ai-search-pydantic-mcp-client
+    https://github.com/azure-ai-foundry/mcp-foundry/sample-python-clients
     """
