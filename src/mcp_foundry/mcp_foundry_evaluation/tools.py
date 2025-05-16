@@ -135,7 +135,7 @@ except Exception as e:
     agent_initialized = False
 
 # Global variables for agent client and cache
-ai_client = None
+ai_client: Optional[AIProjectClient] = None
 agent_cache = {}
 
 
@@ -279,17 +279,17 @@ def create_text_evaluator(evaluator_name: str) -> Any:
 
 def create_agent_evaluator(evaluator_name: str) -> Any:
     """Create and configure an appropriate agent evaluator instance."""
-    if evaluator_name not in agent_evaluator_map:
+    if evaluator_name not in AGENT_EVALUATOR_MAP:
         raise ValueError(f"Unknown agent evaluator: {evaluator_name}")
 
     if not model_config or not all([model_config["azure_endpoint"], model_config["api_key"]]):
         raise ValueError(f"Model configuration required for {evaluator_name} evaluator")
 
-    EvaluatorClass = agent_evaluator_map[evaluator_name]
+    EvaluatorClass = AGENT_EVALUATOR_MAP[evaluator_name]
     return EvaluatorClass(model_config=model_config)
 
 
-async def get_agent(agent_id: str) -> Agent:
+async def get_agent(client: AIProjectClient, agent_id: str) -> Agent:
     """Get an agent by ID with simple caching."""
     global agent_cache
 
@@ -299,7 +299,7 @@ async def get_agent(agent_id: str) -> Agent:
 
     # Fetch agent if not in cache
     try:
-        agent = await ai_client.agents.get_agent(agent_id=agent_id)
+        agent = await client.agents.get_agent(agent_id=agent_id)
         agent_cache[agent_id] = agent
         return agent
     except Exception as e:
@@ -307,27 +307,27 @@ async def get_agent(agent_id: str) -> Agent:
         raise ValueError(f"Agent not found or inaccessible: {agent_id}")
 
 
-async def query_agent(agent_id: str, query: str) -> Dict:
+async def query_agent(client: AIProjectClient, agent_id: str, query: str) -> Dict:
     """Query an Azure AI Agent and get the response with full thread/run data."""
     try:
         # Get agent (from cache or fetch it)
-        agent = await get_agent(agent_id)
+        agent = await get_agent(client, agent_id)
 
         # Always create a new thread
-        thread = await ai_client.agents.create_thread()
+        thread = await client.agents.create_thread()
         thread_id = thread.id
 
         # Add message to thread
-        await ai_client.agents.create_message(thread_id=thread_id, role=MessageRole.USER, content=query)
+        await client.agents.create_message(thread_id=thread_id, role=MessageRole.USER, content=query)
 
         # Process the run
-        run = await ai_client.agents.create_run(thread_id=thread_id, agent_id=agent_id)
+        run = await client.agents.create_run(thread_id=thread_id, agent_id=agent_id)
         run_id = run.id
 
         # Poll until the run is complete
         while run.status in ["queued", "in_progress", "requires_action"]:
             await asyncio.sleep(1)  # Non-blocking sleep
-            run = await ai_client.agents.get_run(thread_id=thread_id, run_id=run.id)
+            run = await client.agents.get_run(thread_id=thread_id, run_id=run.id)
 
         if run.status == "failed":
             error_msg = f"Agent run failed: {run.last_error}"
@@ -341,7 +341,7 @@ async def query_agent(agent_id: str, query: str) -> Dict:
             }
 
         # Get the agent's response
-        response_messages = await ai_client.agents.list_messages(thread_id=thread_id)
+        response_messages = await client.agents.list_messages(thread_id=thread_id)
         response_message = response_messages.get_last_message_by_role(MessageRole.AGENT)
 
         result = ""
@@ -690,7 +690,7 @@ async def agent_query_and_evaluate(
 
         try:
             # Query the agent (this part remains async)
-            query_response = await query_agent(agent_id, query)
+            query_response = await query_agent(ai_client, agent_id, query)
 
             if not query_response.get("success", False):
                 heartbeat_active = False  # Stop heartbeat
@@ -965,7 +965,7 @@ async def connect_agent(agent_id: str, query: str) -> Dict:
             return {"error": "Failed to initialize Azure AI Agent client."}
 
     try:
-        response = await query_agent(agent_id, query)
+        response = await query_agent(ai_client, agent_id, query)
         return response
     except Exception as e:
         logger.error(f"Error connecting to agent: {str(e)}")
@@ -996,7 +996,7 @@ async def query_default_agent(query: str) -> Dict:
             return {"error": "Failed to initialize Azure AI Agent client."}
 
     try:
-        response = await query_agent(default_agent_id, query)
+        response = await query_agent(ai_client, default_agent_id, query)
         return response
     except Exception as e:
         logger.error(f"Error querying default agent: {str(e)}")
