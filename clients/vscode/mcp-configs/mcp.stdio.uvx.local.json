@@ -10,7 +10,9 @@
                 "${workspaceFolder}",
                 "--from",
                 ".",
-                "run-azure-ai-foundry-mcp"
+                "run-azure-ai-foundry-mcp",
+                "--envFile",
+                ".env"
             ]
         }
     }

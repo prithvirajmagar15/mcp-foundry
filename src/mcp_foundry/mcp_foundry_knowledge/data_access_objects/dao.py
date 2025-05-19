@@ -24,7 +24,7 @@ class SearchBaseDao:
         """
         Initializes the SearchBaseDao by reading configuration from environment variables.
         """
-        self.authentication_method = self._get_env_variable("AZURE_AUTHENTICATION_METHOD", "api-search-key")
+        self.authentication_method = self._get_env_variable("SEARCH_AUTHENTICATION_METHOD", "api-search-key")
         self.service_endpoint = self._get_env_variable("AZURE_AI_SEARCH_ENDPOINT")
         self.api_version = self._get_env_variable('AZURE_AI_SEARCH_API_VERSION', '2025-03-01-preview')
 
@@ -80,7 +80,7 @@ class SearchBaseDao:
             return credential
 
         error_message = (
-            "AZURE_AUTHENTICATION_METHOD was not specified or is invalid. "
+            "SEARCH_AUTHENTICATION_METHOD was not specified or is invalid. "
             "Must be one of api-search-key or service-principal"
         )
         raise Exception(error_message)

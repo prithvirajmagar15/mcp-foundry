@@ -6,21 +6,17 @@ Recommended way to run this MCP server is to use `uv` / `uvx`.
 
 To install `uv` / `uvx`, refer to [Installing uv](https://docs.astral.sh/uv/getting-started/installation/).
 
-For example,
-
-# [Linux/macOS](#tab/linux-macos)
+For example, in Linux/macOS,
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-# [Windows](#tab/windows)
+Or, in Windows,
 
 ```powershell
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
-
----
 
 If you have Python installed, you can also install `uv` / `uvx` using `pipx` or `pip`:
 
@@ -53,40 +49,19 @@ The following `vscode/mcp.json` allows downloading and running the server from t
                 "--prerelease=allow",
                 "--from",
                 "git+https://github.com/azure-ai-foundry/mcp-foundry.git",
-                "run-azure-ai-foundry-mcp"
+                "run-azure-ai-foundry-mcp",
+                "--envFile",
+                "${workspaceFolder}/.env"
             ]
         }
     }
 }
 ```
 
+> [!NOTE]
+> - The server can take `.env` file as an argument to load environment variables from it. You can use the `--envFile` option to specify the path to the `.env` file. If the file is not found, the server will still start without loading it and will support all capabilities that do not require values passed via environment variables.
+
 #### Other scenarios
-
-- The server can take `.env` file as an argument to load environment variables from it. You can use the `--envFile` option to specify the path to the `.env` file.
-
-    <details>
-    <summary>Use with --envFile option</summary>
-    
-    ```json
-    {
-        "servers": {
-            "mcp_foundry_server": {
-                "type": "stdio",
-                "command": "uvx",
-                "args": [
-                    "--prerelease=allow",
-                    "--from",
-                    "git+https://github.com/azure-ai-foundry/mcp-foundry.git",
-                    "run-azure-ai-foundry-mcp",
-                    "--envFile",
-                    "${workspaceFolder}/.env"
-                ]
-            }
-        }
-    }
-    ```
-    
-    </details>
 
 - If you want to ensure it always download and run the latest version of the MCP server, you can use the `--no-cache` option.
 
@@ -198,7 +173,7 @@ uvx --prerelease=allow --from git+https://github.com/azure-ai-foundry/mcp-foundr
 ```
 
 > [!NOTE]
-> - You can add `--no-cache` or `--envFile` option as you need.
+> - You can add `--no-cache` or `--envFile` option as you need, or even run it from a cloned repo. See [Other scenarios](#other-scenarios) for reference.
 
 Once the server is up and running, you can configure the MCP client to use the SSE transport by specifying the URL of the server `http://localhost:8000/sse`.
 
