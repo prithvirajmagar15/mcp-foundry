@@ -153,6 +153,8 @@ Coming soon.
 1. Click `Start` button for the server in `.vscode/mcp.json` file.
 1. Open GitHub Copilot chat in Agent mode and start asking questions.
 
+See [More examples for advanced setup](./clients/README.md) for more details on how to set up the MCP server.
+
 ## Setting the Environment Variables
 
 To securely pass information to the MCP server, such as API keys, endpoints, and other sensitive data, you can use environment variables. This is especially important for tools that require authentication or access to external services.
