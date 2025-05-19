@@ -5,11 +5,14 @@
             "command": "uvx",
             "args": [
                 "--no-cache",
+                "--prerelease=allow",
+                "--directory",
+                "${workspaceFolder}",
                 "--from",
-                "git+https://github.com/azure-ai-foundry/mcp-foundry.git@msbuild2025",
+                ".",
                 "run-azure-ai-foundry-mcp",
                 "--envFile",
-                "/path/to/project/.env"
+                ".env"
             ]
         }
     }

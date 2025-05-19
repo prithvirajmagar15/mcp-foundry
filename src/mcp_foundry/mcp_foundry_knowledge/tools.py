@@ -1,6 +1,8 @@
 
 from pathlib import Path
 from typing import Optional, List, cast
+import logging
+import sys
 
 import httpx
 from azure.search.documents.indexes._generated.models import FieldMapping
@@ -11,6 +13,13 @@ from .data_access_objects import SearchIndexDao, SearchClientDao, SearchIndexerD
     OperationResult, \
     SearchDocument
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stderr,
+)
+logger = logging.getLogger("mcp_foundry_knowledge")
 
 @mcp.tool(description="Reads the content of a local file and returns it as a string")
 def fk_fetch_local_file_contents(file_path: str, encoding: str = "utf-8") -> str:

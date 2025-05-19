@@ -51,11 +51,11 @@ from mcp_foundry.mcp_server import mcp
 
 # Configure logging
 logging.basicConfig(
-    level=logging.WARNING,
+    level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     stream=sys.stderr,
 )
-logger = logging.getLogger("azure_ai_foundry_mcp")
+logger = logging.getLogger("mcp_foundry_evaluation")
 
 
 # Configure PromptFlow logging to go to stderr
@@ -376,7 +376,7 @@ def az(*args: str) -> dict:
     cmd = [sys.executable, "-m", "azure.cli", *args, "-o", "json"]
 
     # Log the command that's about to be executed
-    logger.warning(f"Attempting to run: {' '.join(cmd)}")
+    logger.info(f"Attempting to run: {' '.join(cmd)}")
 
     try:
         # Run with full logging
@@ -388,8 +388,8 @@ def az(*args: str) -> dict:
         )
 
         # Log the results
-        logger.warning(f"Command exit code: {result.returncode}")
-        logger.warning(f"Command stdout (first 100 chars): {result.stdout[:100] if result.stdout else 'Empty'}")
+        logger.info(f"Command exit code: {result.returncode}")
+        logger.info(f"Command stdout (first 100 chars): {result.stdout[:100] if result.stdout else 'Empty'}")
         logger.warning(f"Command stderr (first 100 chars): {result.stderr[:100] if result.stderr else 'Empty'}")
 
         if result.returncode != 0:

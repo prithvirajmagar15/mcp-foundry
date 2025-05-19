@@ -1,8 +1,18 @@
 import importlib
 import os
+import logging
+import sys
 from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("azure-ai-foundry-mcp-server")
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stderr,
+)
+logger = logging.getLogger("mcp_server")
 
 def auto_import_modules(base_package: str, targets: list[str]):
     """
@@ -22,9 +32,9 @@ def auto_import_modules(base_package: str, targets: list[str]):
             module_name = f"{base_package}.{submodule}.{target}"
             try:
                 importlib.import_module(module_name)
-                print(f"✅ Imported: {module_name}")
+                logger.info(f"✅ Imported: {module_name}")
             except ModuleNotFoundError:
-                print(f"⚠️ Skipping {module_name} (not found)")
+                logger.warning(f"⚠️ Skipping {module_name} (not found)")
             except Exception as e:
-                print(f"❌ Error importing {module_name}: {e}")
+                logger.error(f"❌ Error importing {module_name}: {e}")
 

@@ -1,15 +1,20 @@
 import logging
 import os
+import sys
 from argparse import ArgumentParser
 from typing import Literal
 from dotenv import load_dotenv
 
 from .mcp_server import mcp, auto_import_modules
 
-# Configure logger
-logger = logging.getLogger("mcp_foundry")
-logging.basicConfig(level=logging.DEBUG)
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stderr,
+)
+logger = logging.getLogger("__main__")
 
 def main() -> None:
     """Runs the MCP server"""
@@ -28,14 +33,14 @@ def main() -> None:
     specified_transport: Literal["stdio", "sse", "streamable-http"] = args.transport
     mcp_env_file = args.envFile
 
-    print(f"Starting MCP server: Transport = {specified_transport}")
+    logger.info(f"Starting MCP server: Transport = {specified_transport}")
 
     # Check if envFile exists and load it
     if mcp_env_file and os.path.exists(mcp_env_file):
         load_dotenv(dotenv_path=mcp_env_file)
-        print(f"Environment variables loaded from {mcp_env_file}")
+        logger.info(f"Environment variables loaded from {mcp_env_file}")
     else:
-        print(f"Environment file '{mcp_env_file}' not found. Skipping environment loading.")
+        logger.warning(f"Environment file '{mcp_env_file}' not found. Skipping environment loading.")
 
     # Run this on startup
     auto_import_modules("mcp_foundry", targets=["tools", "resources", "prompts"])
