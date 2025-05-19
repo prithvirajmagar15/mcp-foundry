@@ -2,112 +2,211 @@
 
 ## Prepare the environment to run the server
 
-To run the MCP server, you need to have a Python version that's compatible with the server and one of the following dependencies installed to run the server: `pipx`, `uvx`, or `uv`. You can compare and choose the one that best fits your needs.
+Recommended way to run this MCP server is to use `uv` / `uvx`.
 
-First, you need to create a Python environment. You can use `conda` or `venv` to create a virtual environment. The following instructions will help you set up the environment.
+To install `uv` / `uvx`, refer to [Installing uv](https://docs.astral.sh/uv/getting-started/installation/).
 
-```bash
-conda create -n mcp-env python=3.10
-conda activate mcp-env
-# or `python3 -m venv mcp-env` and `source mcp-env/bin/activate`
-```
+For example,
 
-Next, you need to install the dependencies. You can use `pipx`, `uvx`, or `uv` to run the server. The following instructions will help you install the dependencies. For more options and guidance, please refer to the official documentation of each tool.
-
-- [pipx](https://pypi.org/project/pipx/)
+# [Linux/macOS](#tab/linux-macos)
 
 ```bash
-pip install pipx
-pipx ensurepath
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-- [uvx](https://pypi.org/project/uvx/)
+# [Windows](#tab/windows)
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+---
+
+If you have Python installed, you can also install `uv` / `uvx` using `pipx` or `pip`:
 
 ```bash
-pip install uvx<2.0
-# or `uv install uvx` or `pipx install uvx`
+# pipx recommended to install uv into an isolated environment
+pipx install uv
+# or `pip install uv`
 ```
 
-- [uv](https://pypi.org/project/uv/)
+> [!NOTE]
+> - `uvx` is a simple alias to `uv tool run` created for convenience. By installing `uv`, you will also have `uvx` available.
+
+## Run the server to use with Visual Studio Code
+
+For Visual Studio Code, simply use the dedicated configuration file (`.vscode/mcp.json`) to run and/or connect to the MCP server. Visual Studio Code supports both Standard Input/Output (`stdio`) and Server-Sent Events (`sse`) modes.
+
+### MCP configuration examples
+
+#### Quick start example
+
+The following `vscode/mcp.json` allows downloading and running the server from the remote URL.
+
+```json
+{
+    "servers": {
+        "mcp_foundry_server": {
+            "type": "stdio",
+            "command": "uvx",
+            "args": [
+                "--prerelease=allow",
+                "--from",
+                "git+https://github.com/azure-ai-foundry/mcp-foundry.git",
+                "run-azure-ai-foundry-mcp"
+            ]
+        }
+    }
+}
+```
+
+#### Other scenarios
+
+- The server can take `.env` file as an argument to load environment variables from it. You can use the `--envFile` option to specify the path to the `.env` file.
+
+    <details>
+    <summary>Use with --envFile option</summary>
+    
+    ```json
+    {
+        "servers": {
+            "mcp_foundry_server": {
+                "type": "stdio",
+                "command": "uvx",
+                "args": [
+                    "--prerelease=allow",
+                    "--from",
+                    "git+https://github.com/azure-ai-foundry/mcp-foundry.git",
+                    "run-azure-ai-foundry-mcp",
+                    "--envFile",
+                    "${workspaceFolder}/.env"
+                ]
+            }
+        }
+    }
+    ```
+    
+    </details>
+
+- If you want to ensure it always download and run the latest version of the MCP server, you can use the `--no-cache` option.
+
+    <details>
+    <summary>Use with --no-cache option</summary>
+    
+    ```json
+    {
+        "servers": {
+            "mcp_foundry_server": {
+                "type": "stdio",
+                "command": "uvx",
+                "args": [
+                    "--no-cache",
+                    "--prerelease=allow",
+                    "--from",
+                    "git+https://github.com/azure-ai-foundry/mcp-foundry.git",
+                    "run-azure-ai-foundry-mcp"
+                ]
+            }
+        }
+    }
+    ```
+    
+    </details>
+
+- You can run the server manually using the command line with SSE (server-sent events) mode, and configure `.vscode/mcp.json` to use the SSE transport.
+
+    <details>
+    <summary>Use with SSE transport</summary>
+    
+    First run the server using the command line:
+    
+    ```bash
+    uvx --prerelease=allow --from git+https://github.com/azure-ai-foundry/mcp-foundry.git run-azure-ai-foundry-mcp --transport sse
+    ```
+    
+    > [!NOTE]
+    > - You can add `--no-cache` or `--envFile` option as you need.
+    
+    Then configure the `.vscode/mcp.json` to use the SSE transport:
+    
+    ```json
+    {
+        "servers": {
+            "mcp_foundry_server": {
+                "type": "sse",
+                "url": "http://localhost:8000/sse"
+            }
+        }
+    }
+    ```
+    
+    </details>
+
+- You can run the server from your local file system, instead of a remote URL.
+
+    <details>
+    <summary>Use with local clone</summary>
+    
+    First clone the repo to your local file system:
+    
+    ```bash
+    git clone https://github.com/azure-ai-foundry/mcp-foundry.git
+    ```
+    
+    Then use the following `.vscode/mcp.json` to run the server:
+    
+    ```json
+    {
+        "servers": {
+            "mcp_foundry_server": {
+                "type": "stdio",
+                "command": "uvx",
+                "args": [
+                    "--prerelease=allow",
+                    "--from",
+                    "./path/to/local/repo",
+                    "run-azure-ai-foundry-mcp"
+                ]
+            }
+        }
+    }
+    ```
+    
+    </details>
+
+> [!NOTE]
+> - Role of `.vscode/mcp.json` is to configure the MCP server for Visual Studio Code. For `stdio` mode, it helps starting the server and connecting to the server. For `sse` mode, it helps connecting to the server that is already running.
+> - Above examples are provided for your reference. You can modify the command and arguments as per your requirements.
+> - To learn more about the transport modes supported by GitHub Copilot and its configuration format, refer to [Configuration format](https://code.visualstudio.com/docs/copilot/chat/mcp-servers#_configuration-format).
+
+### Sample mcp.json files
+
+For convenience, we provide a few samples of MCP configuration files for VS Code in the `mcp-configs` folder. You can use them as a reference to create your own configuration file `.vscode/mcp.json`.
+
+- [mcp.stdio.uvx.local.json](./vscode/mcp-configs/mcp.stdio.uvx.local.json)
+- [mcp.stdio.uvx.remote.json](./vscode/mcp-configs/mcp.stdio.uvx.remote.json)
+- [mcp.sse.json](./vscode/mcp-configs/mcp.sse.json)
+
+## Run the server in SSE mode for other MCP Clients
+
+You can run the server manually using the command line with SSE (server-sent events) mode, either from remote URL or a cloned repo.
+
+Below is an example command to run the server using the remote URL:
 
 ```bash
-pip install uv
-# or `pipx install uv`
+uvx --prerelease=allow --from git+https://github.com/azure-ai-foundry/mcp-foundry.git run-azure-ai-foundry-mcp --transport sse
 ```
 
-## Run the server in SSE mode for MCP Client
+> [!NOTE]
+> - You can add `--no-cache` or `--envFile` option as you need.
 
-To run the MCP server in SSE mode, you need to have the MCP server installed and running.
+Once the server is up and running, you can configure the MCP client to use the SSE transport by specifying the URL of the server `http://localhost:8000/sse`.
 
-You can choose one of the following options (using `pipx`, `uvx`, or `uv` commands) to run the server in SSE mode.
+### Sample MCP Client app using SSE transport
 
-<details>
-<summary>Run server using a cloned repo</summary>
+For your reference, we provide a [sample MCP client app based on PydanticAI](.\python\pydantic-ai\README.md) that uses SSE transport.
 
-You can clone this repo in the environment you want to run the server, and start the server in SSE mode.
+## Troubleshooting
 
-First clone the repo:
-
-```bash
-git clone https://github.com/azure-ai-foundry/mcp-foundry.git -b msbuild2025
-
-# Navigate to the project on your machine
-cd mcp-foundry
-```
-
-Now you can run the server using *one* of the following commands:
-
-```bash
-# With pipx
-pipx run --no-cache --spec . run-azure-ai-foundry-mcp --transport sse --envFile .env
-
-# With uvx
-uvx --no-cache --from . run-azure-ai-foundry-mcp --transport sse --envFile .env
-
-# With uv
-uv run --prerelease=allow python -m mcp_foundry --transport sse --envFile .env
-```
-
-If you do not need `.env` file, you can remove the `--envFile .env` option from the command.
-
-</details>
-
-<details>
-<summary>Run server using a remote URL</summary>
-
-You can alternatively run it using the remote URL for the repo directly. In this case, you don't need to clone the repo in the environment you want to run the server.
-
-You can choose one of the following options (using `pipx`, `uvx`, or `uv` commands) to run the server in SSE mode.
-
-```bash
-
-# With pipx
-pipx run --no-cache --spec git+https://github.com/azure-ai-foundry/mcp-foundry.git@msbuild2025 run-azure-ai-foundry-mcp --transport sse --envFile .env
-
-# With uvx
-uvx --no-cache --from git+https://github.com/azure-ai-foundry/mcp-foundry.git@msbuild2025 run-azure-ai-foundry-mcp --transport sse --envFile .env
-
-```
-
-</details>
-
-We have this example to help you configure your VSCode MCP client in SSE mode:
-
-- mcp.sse.json
-
-Once the server is up and running you can point your code client or VSCode to the SSE endpoint of the service to start exploring the tools.
-
-After the server is up, you can point the MCP Client to this endpoint.
-
-## Run the server in STDIO mode from VSCode or other MCP Hosts that Supports STDIO Transport
-
-We have the following config examples for your reference using uv, uvx and pipx:
-
-- mcp.stdio.pipx.1.json
-- mcp.stdio.pipx.1.json
-- mcp.stdio.pipx.2.json
-- mcp.stdio.uv.json
-- mcp.stdio.uvx.1.json  
-- mcp.stdio.uvx.2.json
-
-You can use the examples from [this folder](./vscode/mcp-configs) to configure your MCP Host using your preferred command.
+- Server fails to start because uvx, uv are not available
+  - Refer to [Installing uv](https://docs.astral.sh/uv/getting-started/installation/) to install and fix for your environment.

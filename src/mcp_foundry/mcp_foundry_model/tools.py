@@ -2,6 +2,7 @@ from mcp.server.fastmcp import Context
 from mcp_foundry.mcp_server import mcp
 import requests
 import os
+import sys
 import logging
 from typing import Optional
 
@@ -25,7 +26,14 @@ from .utils import (
 )
 
 labs_api_url = os.environ.get("LABS_API_URL", "https://foundry-labs-mcp-api.azurewebsites.net/api/v1")
-logger = logging.getLogger("mcp_foundry")
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stderr,
+)
+logger = logging.getLogger("mcp_foundry_model")
 
 @mcp.tool()
 async def list_models_from_model_catalog(ctx: Context, search_for_free_playground: bool = False, publisher_name = "", license_name = "") -> str:
