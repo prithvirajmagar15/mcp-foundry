@@ -179,7 +179,7 @@ Once the server is up and running, you can configure the MCP client to use the S
 
 ### Sample MCP Client app using SSE transport
 
-For your reference, we provide a [sample MCP client app based on PydanticAI](.\python\pydantic-ai\README.md) that uses SSE transport.
+For your reference, we provide a [sample MCP client app based on PydanticAI](./python/pydantic-ai/README.md) that uses SSE transport.
 
 ## Troubleshooting
 
