@@ -908,12 +908,12 @@ async def list_agents() -> str:
             return "Error: Failed to initialize Azure AI Agent client."
 
     try:
-        agents = await AI_CLIENT.agents.list_agents()
+        agents = AI_CLIENT.agents.list_agents()
         if not agents or not agents.data:
             return "No agents found in the Azure AI Agent Service."
 
         result = "## Available Azure AI Agents\n\n"
-        for agent in agents.data:
+        async for agent in agents.data:
             result += f"- **{agent.name}**: `{agent.id}`\n"
 
         if DEFAULT_AGENT_ID:
