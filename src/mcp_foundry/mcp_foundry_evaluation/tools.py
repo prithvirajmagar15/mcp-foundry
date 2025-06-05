@@ -119,7 +119,6 @@ except Exception as e:
     AZURE_AI_PROJECT_ENDPOINT = None
     MODEL_CONFIG = None
     EVALUATION_INITIALIZED = False
-    AGENT_INITIALIZED = False
 
 # Global variables for agent client and cache
 AI_CLIENT: Optional[AIProjectClient] = None
