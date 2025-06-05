@@ -166,14 +166,11 @@ See [example .env file](./clients/python/pydantic-ai/.env.example) for a sample 
 |                | `AZURE_CLIENT_SECRET`         | Yes when using `service-principal` | The secret credential for the Service Principal. |
 |                | `AZURE_AI_SEARCH_API_KEY`     | Yes when using `api-search-key`    | The API key for your Azure AI Search service.    |
 | **Evaluation** | `EVAL_DATA_DIR`               | Always                             | Path to the JSONL evaluation dataset             |
-|                | `AZURE_SUBSCRIPTION_ID`       | Agent eval or risk/safety evals    | Azure subscription ID                            |
-|                | `AZURE_RESOURCE_GROUP`        | Agent eval or risk/safety evals    | Resource group of your Azure AI project          |
-|                | `AZURE_PROJECT_NAME`          | Agent eval or risk/safety evals    | Azure AI project name                            |
 |                | `AZURE_OPENAI_ENDPOINT`       | Text quality evaluators            | Endpoint for Azure OpenAI                        |
 |                | `AZURE_OPENAI_API_KEY`        | Text quality evaluators            | API key for Azure OpenAI                         |
 |                | `AZURE_OPENAI_DEPLOYMENT`     | Text quality evaluators            | Deployment name (e.g., `gpt-4o`)                 |
 |                | `AZURE_OPENAI_API_VERSION`    | Text quality evaluators            | Version of the OpenAI API                        |
-|                | `PROJECT_CONNECTION_STRING`   | Agent services                     | Used for Azure AI Agent querying and evaluation  |
+|                | `AZURE_AI_PROJECT_ENDPOINT`   | Agent services                     | Used for Azure AI Agent querying and evaluation  |
 
 > [!NOTE]
 > **Model**
