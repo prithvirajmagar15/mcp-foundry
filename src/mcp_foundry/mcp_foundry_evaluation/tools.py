@@ -40,7 +40,7 @@ from azure.ai.evaluation import (
     evaluate,
 )
 from azure.ai.projects.aio import AIProjectClient
-from azure.ai.projects.models import Agent, MessageRole
+from azure.ai.agents.models import Agent, MessageRole
 
 # Azure Imports
 from azure.identity import DefaultAzureCredential
