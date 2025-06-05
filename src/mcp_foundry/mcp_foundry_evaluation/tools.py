@@ -909,11 +909,11 @@ async def list_agents() -> str:
 
     try:
         agents = AI_CLIENT.agents.list_agents()
-        if not agents or not agents.data:
+        if not agents:
             return "No agents found in the Azure AI Agent Service."
 
         result = "## Available Azure AI Agents\n\n"
-        async for agent in agents.data:
+        async for agent in agents:
             result += f"- **{agent.name}**: `{agent.id}`\n"
 
         if DEFAULT_AGENT_ID:
