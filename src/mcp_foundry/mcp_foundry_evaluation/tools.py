@@ -40,7 +40,7 @@ from azure.ai.evaluation import (
     evaluate,
 )
 from azure.ai.projects.aio import AIProjectClient
-from azure.ai.agents.models import Agent, MessageRole
+from azure.ai.agents.models import Agent, MessageRole, MessageTextContent
 
 # Azure Imports
 from azure.identity import DefaultAzureCredential
@@ -296,20 +296,20 @@ async def query_agent(client: AIProjectClient, agent_id: str, query: str) -> Dic
         agent = await get_agent(client, agent_id)
 
         # Always create a new thread
-        thread = await client.agents.create_thread()
+        thread = await client.agents.threads.create()
         thread_id = thread.id
 
         # Add message to thread
-        await client.agents.create_message(thread_id=thread_id, role=MessageRole.USER, content=query)
+        await client.agents.messages.create(thread_id=thread_id, role=MessageRole.USER, content=query)
 
         # Process the run
-        run = await client.agents.create_run(thread_id=thread_id, agent_id=agent_id)
+        run = await client.agents.runs.create(thread_id=thread_id, agent_id=agent_id)
         run_id = run.id
 
         # Poll until the run is complete
         while run.status in ["queued", "in_progress", "requires_action"]:
             await asyncio.sleep(1)  # Non-blocking sleep
-            run = await client.agents.get_run(thread_id=thread_id, run_id=run.id)
+            run = await client.agents.runs.get(thread_id=thread_id, run_id=run.id)
 
         if run.status == "failed":
             error_msg = f"Agent run failed: {run.last_error}"
@@ -323,8 +323,11 @@ async def query_agent(client: AIProjectClient, agent_id: str, query: str) -> Dic
             }
 
         # Get the agent's response
-        response_messages = await client.agents.list_messages(thread_id=thread_id)
-        response_message = response_messages.get_last_message_by_role(MessageRole.AGENT)
+        response_messages = client.agents.messages.list(thread_id=thread_id)
+        response_message = None
+        async for msg in response_messages:
+            if msg.role == MessageRole.AGENT:
+                response_message = msg
 
         result = ""
         citations = []
