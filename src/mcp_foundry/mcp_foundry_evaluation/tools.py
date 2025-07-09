@@ -580,6 +580,8 @@ def run_text_eval(
             # Add Azure AI project info if initialized
             if AZURE_AI_PROJECT_ENDPOINT and include_studio_url:
                 eval_args["azure_ai_project"] = AZURE_AI_PROJECT_ENDPOINT
+            
+            eval_args["user_agent"] = "foundry-mcp"  # Set user agent for evaluation
 
             # Run evaluation with additional stdout redirection for extra safety
             with contextlib.redirect_stdout(sys.stderr):
@@ -728,6 +730,7 @@ async def agent_query_and_evaluate(
                         data=temp_filename,
                         evaluators=evaluators,
                         azure_ai_project=AZURE_AI_PROJECT_ENDPOINT if include_studio_url else None,
+                        user_agent="foundry-mcp",
                     )
 
                 # Step 9: Prepare response
