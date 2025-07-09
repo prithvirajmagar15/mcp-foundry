@@ -124,6 +124,7 @@ except Exception as e:
 # Global variables for agent client and cache
 AI_CLIENT: Optional[AIProjectClient] = None
 AGENT_CACHE = {}
+USER_AGENT = "foundry-mcp"  # Custom user agent for Azure AI Project client
 
 
 async def initialize_agent_client():
@@ -135,7 +136,7 @@ async def initialize_agent_client():
 
     try:
         async_credential = AsyncDefaultAzureCredential()
-        AI_CLIENT = AIProjectClient(endpoint=AZURE_AI_PROJECT_ENDPOINT, credential=async_credential)
+        AI_CLIENT = AIProjectClient(endpoint=AZURE_AI_PROJECT_ENDPOINT, credential=async_credential, user_agent=USER_AGENT)
         return True
     except Exception as e:
         logger.error(f"Failed to initialize AIProjectClient: {str(e)}")
@@ -580,8 +581,8 @@ def run_text_eval(
             # Add Azure AI project info if initialized
             if AZURE_AI_PROJECT_ENDPOINT and include_studio_url:
                 eval_args["azure_ai_project"] = AZURE_AI_PROJECT_ENDPOINT
-            
-            eval_args["user_agent"] = "foundry-mcp"  # Set user agent for evaluation
+
+            eval_args["user_agent"] = USER_AGENT
 
             # Run evaluation with additional stdout redirection for extra safety
             with contextlib.redirect_stdout(sys.stderr):
@@ -694,7 +695,7 @@ async def agent_query_and_evaluate(
             from azure.ai.projects import AIProjectClient  # This is the sync version
             from azure.identity import DefaultAzureCredential
 
-            sync_client = AIProjectClient(endpoint=AZURE_AI_PROJECT_ENDPOINT, credential=DefaultAzureCredential())
+            sync_client = AIProjectClient(endpoint=AZURE_AI_PROJECT_ENDPOINT, credential=DefaultAzureCredential(), user_agent=USER_AGENT)
 
             # Step 2: Create converter with the sync client, exactly like example
             from azure.ai.evaluation import AIAgentConverter
@@ -730,7 +731,7 @@ async def agent_query_and_evaluate(
                         data=temp_filename,
                         evaluators=evaluators,
                         azure_ai_project=AZURE_AI_PROJECT_ENDPOINT if include_studio_url else None,
-                        user_agent="foundry-mcp",
+                        user_agent=USER_AGENT,
                     )
 
                 # Step 9: Prepare response
