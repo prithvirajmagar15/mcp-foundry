@@ -78,9 +78,7 @@ jobs:
 
       - name: Run MCP Foundry server
         working-directory: app
-        run: uvx --prerelease=allow --from git+https://github.com/azure-ai-foundry/mcp-foundry.git run-azure-ai-foundry-mcp --transport streamable-http --host 0.0.0.0 --port 8000 --envFile .env
-        env:
-          PORT: 8000
+        run: uvx --prerelease=allow --from git+https://github.com/azure-ai-foundry/mcp-foundry.git run-azure-ai-foundry-mcp --transport streamable-http --envFile .env
 
       - name: "Deploy to Azure Web App"
         uses: azure/webapps-deploy@v3
@@ -89,6 +87,4 @@ jobs:
           app-name: "mcp-foundry"
           slot-name: "Production"
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_DB16A88FDC0D488CAD8771627276DA2B }}
-        env:
-          WEBSITES_PORT: 8000
  
