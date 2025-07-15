@@ -62,7 +62,7 @@ jobs:
           name: python-app
 
       - name: Unzip artifact for deployment
-        run: unzip release.zip
+        run: unzip release.zip -d app
 
       - name: Set up Python version
         uses: actions/setup-python@v5
@@ -78,9 +78,11 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
 
       - name: Install package in editable mode
+        working-directory: app
         run: uv pip install --system --prerelease=allow -e .
 
       - name: Run MCP Foundry server
+        working-directory: app
         run: uvx --prerelease=allow run-azure-ai-foundry-mcp --transport streamable-http --envFile .env
 
       - name: "Deploy to Azure Web App"
@@ -90,4 +92,5 @@ jobs:
           app-name: "mcp-foundry"
           slot-name: "Production"
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_DB16A88FDC0D488CAD8771627276DA2B }}
+
  
