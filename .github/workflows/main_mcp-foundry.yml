@@ -77,6 +77,9 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
           export PATH="$HOME/.local/bin:$PATH"
 
+      - name: Install package in editable mode
+        run: uv pip install --system --prerelease=allow -e .
+
       - name: Run MCP Foundry server
         run: uvx --prerelease=allow run-azure-ai-foundry-mcp --transport streamable-http --envFile .env
 
