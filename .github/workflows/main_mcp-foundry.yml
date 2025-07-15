@@ -55,7 +55,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
 
-
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
@@ -65,8 +64,18 @@ jobs:
       - name: Unzip artifact for deployment
         run: unzip release.zip
 
+      - name: Set up Python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
       - name: Add uvx to PATH
-        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+        run: |
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.local/bin:$PATH"
 
       - name: Run MCP Foundry server
         run: uvx --prerelease=allow run-azure-ai-foundry-mcp --transport streamable-http --envFile .env
