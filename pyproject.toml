@@ -1,3 +1,32 @@
+
+
+[tool.poetry]
+name = "mcp-streamable-http"
+version = "1.0.0"
+description = "A streamable HTTP server using Model Context Protocol"
+authors = ["Your Name <your.email@example.com>"]
+[[tool.poetry.source]]
+name = "custom-registry"
+url = "mcp-foundry-b2fchbbbezhchhaf.eastus2-01.azurewebsites.net"
+[tool.poetry.dependencies]
+python = "^3.9"
+flask = "*"
+requests = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
+
+
+
+
+
+
+
+
+
 [project]
 name = "mcp-foundry"
 version = "0.1.0"
