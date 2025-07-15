@@ -22,16 +22,19 @@ jobs:
       - name: Set up Python version
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Create and start virtual environment
-        run: |
-          python -m venv venv
-          source venv/bin/activate
-      
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-        
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies with uv
+        run: uv pip install --system --prerelease=allow
+
+      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
+
+      - name: Zip artifact for deployment
+        run: zip release.zip ./* -r
+
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
 
       - name: Zip artifact for deployment
@@ -48,8 +51,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
-    
-    
+
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
@@ -59,11 +61,14 @@ jobs:
       - name: Unzip artifact for deployment
         run: unzip release.zip
 
-      
-      - name: 'Deploy to Azure Web App'
+      - name: Run MCP Foundry server
+        run: uvx --prerelease=allow run-azure-ai-foundry-mcp --transport streamable-http --envFile .env
+
+      - name: "Deploy to Azure Web App"
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
-          app-name: 'mcp-foundry'
-          slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_CFD47C00458D4ED79B258F992475AE43 }}
+          app-name: "mcp-foundry"
+          slot-name: "Production"
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_DB16A88FDC0D488CAD8771627276DA2B }}
+ 
